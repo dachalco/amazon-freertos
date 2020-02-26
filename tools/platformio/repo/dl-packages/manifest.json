@@ -1,0 +1,9 @@
+{
+  "framework-freertos": [
+    {
+      "system": "*",
+      "url": "To be populated",
+      "version": "202002.00"
+    }
+  ]
+}
