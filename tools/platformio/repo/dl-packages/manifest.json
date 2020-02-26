@@ -2,7 +2,7 @@
   "framework-freertos": [
     {
       "system": "*",
-      "url": "To be populated",
+      "url": "file:///Users/dchalco/spaces/sim/ts-10968/amazon-freertos/tools/platformio/repo/dl-packages/platformio-freertos.tar.gz",
       "version": "1.202002.0"
     }
   ]
