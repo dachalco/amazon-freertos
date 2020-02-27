@@ -24,5 +24,10 @@ from platformio.util import get_systype
 
 Import("env")
 
-print('Running freertos build script')
 
+print('Running freertos build script')
+program = env.Program(os.path.join('$BUILD_DIR', env.subst('$PROGNAME')),
+                      os.path.join('$PROJECT_DIR', 'src', 'main.c'))
+env.Replace(PIOMAINPROG=program)
+env.Replace(BuildProgram=program)
+env.Exit(0)
