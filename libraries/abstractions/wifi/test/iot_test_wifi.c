@@ -79,7 +79,10 @@
 #define testwifiECHO_SERVER_ADDRESS                                              \
     SOCKETS_inet_addr_quick( tcptestECHO_SERVER_ADDR0, tcptestECHO_SERVER_ADDR1, \
                              tcptestECHO_SERVER_ADDR2, tcptestECHO_SERVER_ADDR3 )
-#define testwifiPING_ADDRESS                testwifiECHO_SERVER_ADDRESS
+
+#define testwifiGOOGLE_DNS_SERVER           SOCKETS_inet_addr_quick( 8, 8, 8, 8)
+
+#define testwifiPING_ADDRESS                testwifiGOOGLE_DNS_SERVER
 
 /* WIFI_GetHostIP() test configurations. */
 #define testwifiTEST_DOMAIN_NAME            "amazon.com" /* Valid domain name. */
