@@ -20,16 +20,20 @@
  *
  * \author    Gregory Cristian ( Semtech )
  */
-#include "stm32l0xx.h"
 #include "utilities.h"
 #include "board.h"
 #include "gpio.h"
-#include "spi-board.h"
+#include "spi.h"
 
-static SPI_HandleTypeDef SpiHandle[2];
+
 
 void SpiInit( Spi_t *obj, SpiId_t spiId, PinNames mosi, PinNames miso, PinNames sclk, PinNames nss )
 {
+#ifdef SHOW_UNIMPLEMENTED
+    #error "Implement Me"
+#endif
+
+/*
     CRITICAL_SECTION_BEGIN( );
 
     obj->SpiId = spiId;
@@ -75,8 +79,10 @@ void SpiInit( Spi_t *obj, SpiId_t spiId, PinNames mosi, PinNames miso, PinNames 
     HAL_SPI_Init( &SpiHandle[spiId] );
 
     CRITICAL_SECTION_END( );
+    */
 }
 
+/*
 void SpiDeInit( Spi_t *obj )
 {
     HAL_SPI_DeInit( &SpiHandle[obj->SpiId] );
@@ -138,9 +144,15 @@ void SpiFrequency( Spi_t *obj, uint32_t hz )
 
     SpiHandle[obj->SpiId].Init.BaudRatePrescaler = baudRate;
 }
+*/
 
 uint16_t SpiInOut( Spi_t *obj, uint16_t outData )
 {
+#ifdef SHOW_UNIMPLEMENTED
+    #error "Implement Me"
+#endif
+
+/*
     uint8_t rxData = 0;
 
     if( ( obj == NULL ) || ( SpiHandle[obj->SpiId].Instance ) == NULL )
@@ -161,5 +173,6 @@ uint16_t SpiInOut( Spi_t *obj, uint16_t outData )
     CRITICAL_SECTION_END( );
 
     return( rxData );
+*/
 }
 

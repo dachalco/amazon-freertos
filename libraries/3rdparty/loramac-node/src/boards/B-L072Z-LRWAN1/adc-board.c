@@ -22,7 +22,7 @@
  */
 #include <stdint.h>
 #include <stdbool.h>
-#include "stm32l0xx.h"
+//#include "stm32l0xx.h"
 #include "board-config.h"
 #include "adc-board.h"
 

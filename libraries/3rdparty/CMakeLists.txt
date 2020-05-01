@@ -280,3 +280,31 @@ if(EXISTS "${AFR_3RDPARTY_DIR}/unity")
     )
     target_compile_definitions(3rdparty::unity INTERFACE UNITY_INCLUDE_CONFIG_H)
 endif()
+
+# loramac stack
+if(EXISTS "${AFR_3RDPARTY_DIR}/loramac-node")
+    afr_3rdparty_module(loramac-node)
+   
+    # --- NRF Board setup
+    file(GLOB LORA_NRF_BOARD_SOURCES
+        "${AFR_3RDPARTY_DIR}/loramac-node/src/boards/nrf52/*.c"
+    )
+    
+    file(GLOB LORA_MAC_SOURCES
+        "${AFR_3RDPARTY_DIR}/loramac-node/src/mac/*.c"
+        "${AFR_3RDPARTY_DIR}/loramac-node/src/mac/region/*.c"
+    )
+ 
+    # --- LoraNet MAC 
+    target_sources(
+        3rdparty::loramac-node
+        ${LORA_NRF_BOARD_SOURCES}
+        ${LORA_MAC_SOURCES}
+    )
+
+    # --- External dependencies, like nrf sdk 
+    # TODO: Should require nrf sources 
+
+    
+    target_compile_definitions(3rdparty::loramac-node INTERFACE afr_3rdparty_loramac)
+endif()

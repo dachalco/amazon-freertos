@@ -26,6 +26,8 @@
       Name="Debug"
       arm_linker_heap_size="8192"
       arm_linker_stack_size="8192"
+      c_preprocessor_definitions="REGION_US915"
+      c_user_include_directories=".;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/radio;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/radio/sx126x;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/system;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/boards;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52"
       gcc_debugging_level="Level 3"
       gcc_dwarf_version="dwarf-4" />
     <folder Name="application_code">
@@ -132,50 +134,50 @@
     <folder Name="libraries">
       <file file_name="../../../../../libraries/CMakeLists.txt" />
       <folder Name="3rdparty">
-        <file file_name="../../../../../libraries/3rdparty/CMakeLists.txt" />
+        <file file_name="CMakeLists.txt" />
         <folder Name="jsmn">
-          <file file_name="../../../../../libraries/3rdparty/jsmn/jsmn.c" />
-          <file file_name="../../../../../libraries/3rdparty/jsmn/jsmn.h" />
+          <file file_name="jsmn.c" />
+          <file file_name="jsmn.h" />
         </folder>
         <folder Name="mbedtls_config">
-          <file file_name="../../../../../libraries/3rdparty/mbedtls_config/aws_mbedtls_config.h" />
+          <file file_name="aws_mbedtls_config.h" />
         </folder>
         <folder Name="mbedtls">
           <folder Name="include">
             <folder Name="mbedtls">
-              <file file_name="../../../../../libraries/3rdparty/mbedtls/include/mbedtls/base64.h" />
-              <file file_name="../../../../../libraries/3rdparty/mbedtls/include/mbedtls/platform.h" />
+              <file file_name="base64.h" />
+              <file file_name="platform.h" />
             </folder>
           </folder>
           <folder Name="library">
-            <file file_name="../../../../../libraries/3rdparty/mbedtls/library/base64.c" />
+            <file file_name="base64.c" />
           </folder>
         </folder>
         <folder Name="tinycbor">
           <file file_name="../../../../../libraries/3rdparty/tinycbor/assert_p.h" />
-          <file file_name="../../../../../libraries/3rdparty/tinycbor/cbor.h" />
+          <file file_name="cbor.h" />
           <file file_name="../../../../../libraries/3rdparty/tinycbor/cborconstants_p.h" />
-          <file file_name="../../../../../libraries/3rdparty/tinycbor/cborencoder.c" />
-          <file file_name="../../../../../libraries/3rdparty/tinycbor/cborencoder_close_container_checked.c" />
-          <file file_name="../../../../../libraries/3rdparty/tinycbor/cborerrorstrings.c" />
-          <file file_name="../../../../../libraries/3rdparty/tinycbor/cborparser.c" />
-          <file file_name="../../../../../libraries/3rdparty/tinycbor/cborparser_dup_string.c" />
-          <file file_name="../../../../../libraries/3rdparty/tinycbor/cborpretty.c" />
-          <file file_name="../../../../../libraries/3rdparty/tinycbor/compilersupport_p.h" />
+          <file file_name="cborencoder.c" />
+          <file file_name="cborencoder_close_container_checked.c" />
+          <file file_name="cborerrorstrings.c" />
+          <file file_name="cborparser.c" />
+          <file file_name="cborparser_dup_string.c" />
+          <file file_name="cborpretty.c" />
+          <file file_name="compilersupport_p.h" />
           <file file_name="../../../../../libraries/3rdparty/tinycbor/extract_number_p.h" />
           <file file_name="../../../../../libraries/3rdparty/tinycbor/math_support_p.h" />
         </folder>
         <folder Name="tinycrypt">
           <folder Name="asn1">
-            <file file_name="../../../../../libraries/3rdparty/tinycrypt/asn1/asn1.h" />
-            <file file_name="../../../../../libraries/3rdparty/tinycrypt/asn1/asn1parse.c" />
+            <file file_name="asn1.h" />
+            <file file_name="asn1parse.c" />
           </folder>
         </folder>
         <folder Name="tracealyzer_recorder">
           <folder Name="streamports">
             <folder Name="Jlink_RTT">
-              <file file_name="../../../../../libraries/3rdparty/tracealyzer_recorder/streamports/Jlink_RTT/Readme-Streamport.txt" />
-              <file file_name="../../../../../libraries/3rdparty/tracealyzer_recorder/streamports/Jlink_RTT/SEGGER_RTT_Printf.c" />
+              <file file_name="Readme-Streamport.txt" />
+              <file file_name="SEGGER_RTT_Printf.c" />
             </folder>
           </folder>
         </folder>
@@ -644,6 +646,40 @@
         </folder>
       </folder>
       <configuration Name="Debug" build_suppress_warnings="Yes" />
+    </folder>
+    <folder Name="LoraMac">
+      <folder Name="mac" />
+      <folder Name="hal" />
+      <folder Name="driver">
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/sx126x-board.h" />
+        <folder Name="radio">
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/radio/sx126x/radio.c" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/radio/sx126x/sx126x.c" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/radio/sx126x/sx126x.h" />
+        </folder>
+        <folder Name="gpio">
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/gpio-board.h" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/gpio-board.c" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/pinName-board.h" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/board-config.h" />
+        </folder>
+        <folder Name="spi">
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/spi-board.c" />
+        </folder>
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/sx1262mbxcas-board.c" />
+        <folder Name="system">
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/gpio.c" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/gpio.h" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/delay.c" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/delay.h" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/spi.h" />
+        </folder>
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/utilities.h" />
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/board.c" />
+        <folder Name="board">
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/delay-board.c" />
+        </folder>
+      </folder>
     </folder>
   </project>
   <configuration

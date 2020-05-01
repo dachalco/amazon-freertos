@@ -42,6 +42,11 @@
 
 #include "aws_demo.h"
 #include "aws_demo_config.h"
+//#include "LoRaMac.h"
+
+
+#include "nrf_gpio.h"
+#include "sx126x.h"
 
 /* Forward declaration of demo entry function to be renamed from #define in aws_demo_config.h */
 int DEMO_entryFUNCTION( bool awsIotMqttMode,
@@ -71,6 +76,87 @@ int DEMO_entryFUNCTION( bool awsIotMqttMode,
 #endif
 
 /*-----------------------------------------------------------*/
+/* Interfaced pins */
+#define SX1262_PIN_LED        NRF_GPIO_PIN_MAP(0, 14)  // Out: nrf52 onboard LED2. Used for status/sanity check. Does not affect chip
+#define SX1262_PIN_BUSY       NRF_GPIO_PIN_MAP(1, 3)  // In :
+#define SX1262_PIN_DIO_1      NRF_GPIO_PIN_MAP(1, 6)  // In : Setup to be the IRQ line. Needs GPIOTE
+
+#define SX1262_PIN_NSS        NRF_GPIO_PIN_MAP(1, 8)  // Out: SPI Slave select
+#define SX1262_PIN_MOSI       NRF_GPIO_PIN_MAP(1, 13) // Out: SPI Slave input
+#define SX1262_PIN_MISO       NRF_GPIO_PIN_MAP(1, 14) // In : SPI Slave output
+#define SX1262_PIN_SCK        NRF_GPIO_PIN_MAP(1, 15) // Out: SPI Slave clock
+
+#define SX1262_PIN_SX_NRESET  NRF_GPIO_PIN_MAP(0, 3)  // Out: Active LOW shield reset
+
+/* Probe pins for different stages of chip setup. See PCB Circuit. Read ONLY */
+#define SX1262_PIN_SX_ANT_SW      NRF_GPIO_PIN_MAP(1, 10)  // In
+#define SX1262_PIN_SX_XTAL_SEL    NRF_GPIO_PIN_MAP(0, 29)  // In
+#define SX1262_PIN_SX_DEVICE_SEL  NRF_GPIO_PIN_MAP(0, 28)  // In
+#define SX1262_PIN_SX_FREQ_SEL    NRF_GPIO_PIN_MAP(0, 4)   // In
+
+/* The remaining pins are pass-through, already routed to VDD/GND, or don't-cares */
+
+/* Assign appropriate IO for module, except for SPI pins which are assigned in separate init function */
+void init_SX1262_Shield_IO()
+{
+    // Unrelate status LED
+    nrf_gpio_cfg_output(SX1262_PIN_LED); 
+    nrf_gpio_pin_set(SX1262_PIN_LED);
+
+    // Interface pins, minus SPI
+    nrf_gpio_cfg_input(SX1262_PIN_BUSY,  NRF_GPIO_PIN_NOPULL);
+    nrf_gpio_cfg_input(SX1262_PIN_DIO_1, NRF_GPIO_PIN_NOPULL);
+    nrf_gpio_cfg_output(SX1262_PIN_SX_NRESET); 
+
+    // Status pins. Mostly for debugging HW
+    nrf_gpio_cfg_input(SX1262_PIN_SX_ANT_SW,     NRF_GPIO_PIN_NOPULL);
+    nrf_gpio_cfg_input(SX1262_PIN_SX_XTAL_SEL,   NRF_GPIO_PIN_NOPULL);
+    nrf_gpio_cfg_input(SX1262_PIN_SX_DEVICE_SEL, NRF_GPIO_PIN_NOPULL);
+    nrf_gpio_cfg_input(SX1262_PIN_SX_FREQ_SEL,   NRF_GPIO_PIN_NOPULL);
+
+  
+    /* TODO: Interrupts will be routed through this pin. Requires GPIOTE config instead */
+
+    // Now that all pins are configured, release chip from reset state
+    nrf_gpio_pin_set(SX1262_PIN_SX_NRESET);
+}
+
+void init_SX1262_Shield_SPI()
+{
+    
+}
+
+void init_SX1262_Shield()
+{ 
+    
+    //init_SX1262_Shield_IO();
+    //init_SX1262_Shield_SPI();
+
+}
+
+static TaskHandle_t mTask_lora = NULL;
+void lora_test_entry()
+{
+    printf("Initializing chip...");
+    SX126xInit(NULL);
+    printf("Done.\n");
+    
+    const TickType_t xSleepTick = 2000 / portTICK_PERIOD_MS;
+    TickType_t count = 0;
+    while(1)
+    {
+        nrf_gpio_pin_toggle(SX1262_PIN_LED);
+        printf(".");
+        if (count % 10) 
+        {
+            printf("\n");
+        }
+        vTaskDelay(xSleepTick);
+    }
+
+    vTaskDelete(NULL);
+}
+
 
 /**
  * @brief Runs the one demo configured in the config file.
@@ -78,7 +164,7 @@ int DEMO_entryFUNCTION( bool awsIotMqttMode,
 void DEMO_RUNNER_RunDemos( void )
 {
     /* These demos are shared with the C SDK and perform their own initialization and cleanup. */
-
+    /*
     static demoContext_t mqttDemoContext =
     {
         .networkTypes                = democonfigNETWORK_TYPES,
@@ -91,4 +177,12 @@ void DEMO_RUNNER_RunDemos( void )
                               &mqttDemoContext,
                               democonfigDEMO_PRIORITY,
                               democonfigDEMO_STACKSIZE );
+*/
+                                  
+    xTaskCreate(lora_test_entry, "lora", configMINIMAL_STACK_SIZE + 0x40, NULL, tskIDLE_PRIORITY + 1, &mTask_lora);
+
 }
+
+
+
+

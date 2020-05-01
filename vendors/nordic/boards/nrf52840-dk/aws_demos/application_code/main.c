@@ -330,12 +330,14 @@ static void prvMiscInitialization( void )
     prvClockInit();
 
     /* Activate deep sleep mode. */
-    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    //SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
     NumericComparisonInit();
     prvTimersInit();
     UARTqueue = xQueueCreate( 1, sizeof( INPUTMessage_t ) );
 }
 /*-----------------------------------------------------------*/
+
+
 
 /**
  * @brief Application runtime entry point.
@@ -350,9 +352,12 @@ int main( void )
                             tskIDLE_PRIORITY,
                             mainLOGGING_MESSAGE_QUEUE_LENGTH );
 
-    nrf_sdh_freertos_init( NULL, NULL );
-    ret_code_t xErrCode = pm_init();
+
+    //nrf_sdh_freertos_init( NULL, NULL ); Don't care about their bluetooth soft device for now
+    //ret_code_t xErrCode = pm_init();
     vTaskStartScheduler();
+
+    while(1); 
 
     return 0;
 }
@@ -395,7 +400,6 @@ void vApplicationDaemonTaskStartupHook( void )
 }
 
 /*-----------------------------------------------------------*/
-
 /**
  * @brief User defined Idle task function.
  *

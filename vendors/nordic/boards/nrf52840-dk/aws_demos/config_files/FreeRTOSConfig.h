@@ -275,4 +275,10 @@ extern uint32_t ulRand();
      */
 #define configUSE_DISABLE_TICK_AUTO_CORRECTION_DEBUG     0
 
+
+
+// Enabling this will show which functions need implementations, via an #error macro
+//#define SHOW_UNIMPLEMENTED
+
+
 #endif /* FREERTOS_CONFIG_H */

@@ -52,7 +52,8 @@ void SX126xIoInit( void )
 
 void SX126xIoIrqInit( DioIrqHandler dioIrq )
 {
-    GpioSetInterrupt( &SX126x.DIO1, IRQ_RISING_EDGE, IRQ_HIGH_PRIORITY, dioIrq );
+    // TODO: Need to use nrf's gpiote lib
+    //GpioSetInterrupt( &SX126x.DIO1, IRQ_RISING_EDGE, IRQ_HIGH_PRIORITY, dioIrq );
 }
 
 void SX126xIoDeInit( void )

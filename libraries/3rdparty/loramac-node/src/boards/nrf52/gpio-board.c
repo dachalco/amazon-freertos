@@ -20,11 +20,14 @@
  *
  * \author    Gregory Cristian ( Semtech )
  */
-#include "stm32l0xx.h"
+//#include "stm32l0xx.h"
 #include "utilities.h"
 #include "board-config.h"
 #include "rtc-board.h"
 #include "gpio-board.h"
+//#include <stddef.h>
+#include "FreeRTOS.h"
+
 #if defined( BOARD_IOE_EXT )
 #include "gpio-ioe.h"
 #endif
@@ -33,6 +36,11 @@ static Gpio_t *GpioIrq[16];
 
 void GpioMcuInit( Gpio_t *obj, PinNames pin, PinModes mode, PinConfigs config, PinTypes type, uint32_t value )
 {
+#ifdef SHOW_UNIMPLEMENTED
+    #error "Implement Me"
+#endif
+
+/* 
     if( pin < IOE_0 )
     {
         GPIO_InitTypeDef GPIO_InitStructure;
@@ -122,15 +130,24 @@ void GpioMcuInit( Gpio_t *obj, PinNames pin, PinModes mode, PinConfigs config, P
         GpioIoeInit( obj, pin, mode, config, type, value );
 #endif
     }
+    */
 }
 
+/*
 void GpioMcuSetContext( Gpio_t *obj, void* context )
 {
     obj->Context = context;
 }
+*/
+
 
 void GpioMcuSetInterrupt( Gpio_t *obj, IrqModes irqMode, IrqPriorities irqPriority, GpioIrqHandler *irqHandler )
 {
+#ifdef SHOW_UNIMPLEMENTED
+    #error "Implement Me"
+#endif
+
+/*
     if( obj->pin < IOE_0 )
     {
         uint32_t priority = 0;
@@ -223,7 +240,10 @@ void GpioMcuSetInterrupt( Gpio_t *obj, IrqModes irqMode, IrqPriorities irqPriori
         GpioIoeSetInterrupt( obj, irqMode, irqPriority, irqHandler );
 #endif
     }
+    */
 }
+
+/*
 
 void GpioMcuRemoveInterrupt( Gpio_t *obj )
 {
@@ -246,9 +266,15 @@ void GpioMcuRemoveInterrupt( Gpio_t *obj )
 #endif
     }
 }
+*/
 
 void GpioMcuWrite( Gpio_t *obj, uint32_t value )
 {
+#ifdef SHOW_UNIMPLEMENTED
+    #error "Implement Me"
+#endif
+
+/*
     if( obj->pin < IOE_0 )
     {
         if( obj == NULL )
@@ -269,8 +295,10 @@ void GpioMcuWrite( Gpio_t *obj, uint32_t value )
         GpioIoeWrite( obj, value );
 #endif
     }
+    */
 }
 
+/*
 void GpioMcuToggle( Gpio_t *obj )
 {
     if( obj->pin < IOE_0 )
@@ -295,9 +323,14 @@ void GpioMcuToggle( Gpio_t *obj )
 #endif
     }
 }
+*/
 
 uint32_t GpioMcuRead( Gpio_t *obj )
 {
+#ifdef SHOW_UNIMPLEMENTED
+    #error "Implement Me"
+#endif
+/*
     if( obj->pin < IOE_0 )
     {
         if( obj == NULL )
@@ -320,8 +353,10 @@ uint32_t GpioMcuRead( Gpio_t *obj )
         return 0;
 #endif
     }
+    */
 }
 
+/*
 void EXTI0_1_IRQHandler( void )
 {
     HAL_GPIO_EXTI_IRQHandler( GPIO_PIN_0 );
@@ -336,6 +371,7 @@ void EXTI2_3_IRQHandler( void )
 
 void EXTI4_15_IRQHandler( void )
 {
+
     HAL_GPIO_EXTI_IRQHandler( GPIO_PIN_4 );
     HAL_GPIO_EXTI_IRQHandler( GPIO_PIN_5 );
     HAL_GPIO_EXTI_IRQHandler( GPIO_PIN_6 );
@@ -368,3 +404,4 @@ void HAL_GPIO_EXTI_Callback( uint16_t gpioPin )
         GpioIrq[callbackIndex]->IrqHandler( GpioIrq[callbackIndex]->Context );
     }
 }
+*/

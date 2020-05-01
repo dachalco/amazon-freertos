@@ -14,6 +14,7 @@ afr_module_dependencies(
     ${AFR_CURRENT_MODULE}
     INTERFACE
         AFR::mqtt
+        3rdparty::loramac-node 
 )
 
 
