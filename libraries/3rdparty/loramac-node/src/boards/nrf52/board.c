@@ -24,6 +24,7 @@
 #include "utilities.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "board-config.h"
 
 void BoardCriticalSectionBegin( uint32_t *mask )
 {

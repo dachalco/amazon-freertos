@@ -278,7 +278,6 @@ extern uint32_t ulRand();
 
 
 // Enabling this will show which functions need implementations, via an #error macro
-//#define SHOW_UNIMPLEMENTED
-
+#define SHOW_UNIMPLEMENTED
 
 #endif /* FREERTOS_CONFIG_H */

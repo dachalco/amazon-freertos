@@ -46,7 +46,12 @@
 
 
 #include "nrf_gpio.h"
-#include "sx126x.h"
+#include "nrf_drv_gpiote.h"
+
+// From loramac-node stack
+#include "board-config.h"
+#include "spi.h"
+#include "sx126x-board.h"
 
 /* Forward declaration of demo entry function to be renamed from #define in aws_demo_config.h */
 int DEMO_entryFUNCTION( bool awsIotMqttMode,
@@ -134,11 +139,23 @@ void init_SX1262_Shield()
 
 }
 
+void SX1262_ISR()
+{
+}
+
 static TaskHandle_t mTask_lora = NULL;
 void lora_test_entry()
 {
+
+    // Radio's DIO1 will route irq line through gpio, hence gpiote
+    configASSERT(NRF_SUCCESS == nrf_drv_gpiote_init());
+
+
+
     printf("Initializing chip...");
-    SX126xInit(NULL);
+    SpiInit(&SX126x.Spi, SPI_1, RADIO_MOSI, RADIO_MISO, RADIO_SCLK, NC );
+    SX126xIoInit();
+    SX126xInit(SX1262_ISR);
     printf("Done.\n");
     
     const TickType_t xSleepTick = 2000 / portTICK_PERIOD_MS;

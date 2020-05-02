@@ -34,7 +34,6 @@ extern "C"
 
 #include <stdint.h>
 #include "pinName-board.h"
-#include "pinName-ioe.h"
 
 /*!
  * Board GPIO pin names
@@ -42,8 +41,6 @@ extern "C"
 typedef enum
 {
     MCU_PINS,
-    IOE_PINS,
-
     // Not connected
     NC = (int)0xFFFFFFFF
 }PinNames;

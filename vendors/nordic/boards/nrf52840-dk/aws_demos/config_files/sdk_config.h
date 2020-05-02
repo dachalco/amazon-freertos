@@ -3150,12 +3150,13 @@
 
 // <e> NRFX_SPIM_ENABLED - nrfx_spim - SPIM peripheral driver
 //==========================================================
+#define NRFX_SPIM_ENABLED 1
 #ifndef NRFX_SPIM_ENABLED
 #define NRFX_SPIM_ENABLED 0
 #endif
 // <q> NRFX_SPIM0_ENABLED  - Enable SPIM0 instance
 
-
+#define NRFX_SPIM0_ENABLED 1
 #ifndef NRFX_SPIM0_ENABLED
 #define NRFX_SPIM0_ENABLED 0
 #endif
@@ -3175,7 +3176,6 @@
 #endif
 
 // <q> NRFX_SPIM3_ENABLED  - Enable SPIM3 instance
-
 
 #ifndef NRFX_SPIM3_ENABLED
 #define NRFX_SPIM3_ENABLED 0
@@ -5149,6 +5149,7 @@
 
 // <e> SPI_ENABLED - nrf_drv_spi - SPI/SPIM peripheral driver - legacy layer
 //==========================================================
+#define SPI_ENABLED 1
 #ifndef SPI_ENABLED
 #define SPI_ENABLED 0
 #endif
@@ -5181,6 +5182,7 @@
 
 // <e> SPI0_ENABLED - Enable SPI0 instance
 //==========================================================
+#define SPI0_ENABLED 1
 #ifndef SPI0_ENABLED
 #define SPI0_ENABLED 0
 #endif
@@ -5700,7 +5702,7 @@
 //==========================================================
 // <q> APP_GPIOTE_ENABLED  - app_gpiote - GPIOTE events dispatcher
 
-
+#define APP_GPIOTE_ENABLED 1
 #ifndef APP_GPIOTE_ENABLED
 #define APP_GPIOTE_ENABLED 0
 #endif

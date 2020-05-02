@@ -27,110 +27,80 @@
 #include "gpio-board.h"
 //#include <stddef.h>
 #include "FreeRTOS.h"
+#include "nrf_gpio.h"
+#include "nrf_drv_gpiote.h"
 
-#if defined( BOARD_IOE_EXT )
-#include "gpio-ioe.h"
-#endif
+
 
 static Gpio_t *GpioIrq[16];
 
-void GpioMcuInit( Gpio_t *obj, PinNames pin, PinModes mode, PinConfigs config, PinTypes type, uint32_t value )
+/* This API has been reduced to only support radio interface pins on nrf52 
+   and does NOT serve as generalized API for all onboard pins */
+void CheckNrfPin(uint32_t pin)
 {
-#ifdef SHOW_UNIMPLEMENTED
-    #error "Implement Me"
-#endif
+    configASSERT(pin == RADIO_RESET ||
+           pin == RADIO_MOSI || 
+           pin == RADIO_MISO || 
+           pin == RADIO_SCLK ||
+           pin == RADIO_NSS ||
+           pin == RADIO_BUSY ||
+           pin == RADIO_DIO_1 ||
+           pin == RADIO_ANT_SWITCH_POWER ||
+           pin == RADIO_FREQ_SEL ||
+           pin == RADIO_XTAL_SEL || 
+           pin == RADIO_DEVICE_SEL ||
+           pin == LED_1);
+}
+      
 
-/* 
-    if( pin < IOE_0 )
+void GpioMcuInit( Gpio_t *obj, uint16_t pinIndex, PinModes mode, PinConfigs config, PinTypes type, uint32_t value )
+{
+    /* nrf52 port only uses this for lora radio driver */
+    configASSERT(obj);
+    CheckNrfPin(pinIndex);
+    obj->pinIndex = pinIndex;
+
+    if( mode == PIN_INPUT )
     {
-        GPIO_InitTypeDef GPIO_InitStructure;
-
-        obj->pin = pin;
-
-        if( pin == NC )
+        if ( type == PIN_NO_PULL ) 
         {
-            return;
+            nrf_gpio_cfg_input(pinIndex, NRF_GPIO_PIN_NOPULL);
         }
-
-        obj->pinIndex = ( 0x01 << ( obj->pin & 0x0F ) );
-
-        if( ( obj->pin & 0xF0 ) == 0x00 )
+        else if ( type == PIN_PULL_UP )
         {
-            obj->port = GPIOA;
-            __HAL_RCC_GPIOA_CLK_ENABLE( );
+            nrf_gpio_cfg_input(pinIndex, NRF_GPIO_PIN_PULLUP);
+        } 
+        else if ( type == PIN_PULL_DOWN ) 
+        {
+            nrf_gpio_cfg_input(pinIndex, NRF_GPIO_PIN_PULLDOWN);
         }
-        else if( ( obj->pin & 0xF0 ) == 0x10 )
+        else 
         {
-            obj->port = GPIOB;
-            __HAL_RCC_GPIOB_CLK_ENABLE( );
+            configASSERT(0); // Invalid pin pull/push configuration
         }
-        else if( ( obj->pin & 0xF0 ) == 0x20 )
+    } 
+    else if( mode == PIN_OUTPUT )
+    {   
+        nrf_gpio_cfg_output(pinIndex); 
+        GpioMcuWrite( obj, value );
+    } 
+    else if( mode == PIN_ANALOGIC )
+    {
+        /* The reset on the chip is active low. Higher level APIs pull it down, but there after we must escape the reset state by holding
+           the chip's reset HIGH. They had a quirky way of assigning a pull-up resistor....which for consistency is replicated for nrf52 */
+        if (pinIndex == RADIO_RESET) 
         {
-            obj->port = GPIOC;
-            __HAL_RCC_GPIOC_CLK_ENABLE( );
-        }
-        else if( ( obj->pin & 0xF0 ) == 0x30 )
-        {
-            obj->port = GPIOD;
-            __HAL_RCC_GPIOD_CLK_ENABLE( );
+            nrf_gpio_cfg_input(pinIndex, NRF_GPIO_PIN_PULLUP);
         }
         else
         {
-            assert_param( FAIL );
+            configASSERT(0);
         }
-
-        GPIO_InitStructure.Pin =  obj->pinIndex ;
-        GPIO_InitStructure.Pull = obj->pull = type;
-        GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH;
-
-        if( mode == PIN_INPUT )
-        {
-            GPIO_InitStructure.Mode = GPIO_MODE_INPUT;
-        }
-        else if( mode == PIN_ANALOGIC )
-        {
-            GPIO_InitStructure.Mode = GPIO_MODE_ANALOG;
-        }
-        else if( mode == PIN_ALTERNATE_FCT )
-        {
-            if( config == PIN_OPEN_DRAIN )
-            {
-                GPIO_InitStructure.Mode = GPIO_MODE_AF_OD;
-            }
-            else
-            {
-                GPIO_InitStructure.Mode = GPIO_MODE_AF_PP;
-            }
-            GPIO_InitStructure.Alternate = value;
-        }
-        else // mode output
-        {
-            if( config == PIN_OPEN_DRAIN )
-            {
-                GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_OD;
-            }
-            else
-            {
-                GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
-            }
-        }
-
-        // Sets initial output value
-        if( mode == PIN_OUTPUT )
-        {
-            GpioMcuWrite( obj, value );
-        }
-
-        HAL_GPIO_Init( obj->port, &GPIO_InitStructure );
     }
     else
     {
-#if defined( BOARD_IOE_EXT )
-        // IOExt Pin
-        GpioIoeInit( obj, pin, mode, config, type, value );
-#endif
+        configASSERT(0);
     }
-    */
 }
 
 /*
@@ -140,107 +110,21 @@ void GpioMcuSetContext( Gpio_t *obj, void* context )
 }
 */
 
-
+// Ex: .//src/boards/NucleoL152/sx1262mbxcas-board.c:    GpioSetInterrupt( &SX126x.DIO1, IRQ_RISING_EDGE, IRQ_HIGH_PRIORITY, dioIrq );
 void GpioMcuSetInterrupt( Gpio_t *obj, IrqModes irqMode, IrqPriorities irqPriority, GpioIrqHandler *irqHandler )
 {
-#ifdef SHOW_UNIMPLEMENTED
-    #error "Implement Me"
-#endif
+    // For the nrf52 port, only DIO1 will be used to route IRQ from radio with rising edge trigger
+    configASSERT(irqHandler && obj && obj->pinIndex == RADIO_DIO_1 && irqMode == IRQ_RISING_EDGE);
+    nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);
+    in_config.pull = NRF_GPIO_PIN_PULLDOWN;
+    configASSERT(NRF_SUCCESS == nrf_drv_gpiote_in_init(obj->pinIndex, &in_config, irqHandler));
+    
+    // Enable event generation from the pin 
+    nrf_drv_gpiote_in_event_enable(obj->pinIndex, true);
 
-/*
-    if( obj->pin < IOE_0 )
-    {
-        uint32_t priority = 0;
-
-        IRQn_Type IRQnb = EXTI0_1_IRQn;
-        GPIO_InitTypeDef   GPIO_InitStructure;
-
-        if( irqHandler == NULL )
-        {
-            return;
-        }
-
-        obj->IrqHandler = irqHandler;
-
-        GPIO_InitStructure.Pin =  obj->pinIndex;
-
-        if( irqMode == IRQ_RISING_EDGE )
-        {
-            GPIO_InitStructure.Mode = GPIO_MODE_IT_RISING;
-        }
-        else if( irqMode == IRQ_FALLING_EDGE )
-        {
-            GPIO_InitStructure.Mode = GPIO_MODE_IT_FALLING;
-        }
-        else
-        {
-            GPIO_InitStructure.Mode = GPIO_MODE_IT_RISING_FALLING;
-        }
-
-        GPIO_InitStructure.Pull = obj->pull;
-        GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_HIGH;
-
-        HAL_GPIO_Init( obj->port, &GPIO_InitStructure );
-
-        switch( irqPriority )
-        {
-        case IRQ_VERY_LOW_PRIORITY:
-        case IRQ_LOW_PRIORITY:
-            priority = 3;
-            break;
-        case IRQ_MEDIUM_PRIORITY:
-            priority = 2;
-            break;
-        case IRQ_HIGH_PRIORITY:
-            priority = 1;
-            break;
-        case IRQ_VERY_HIGH_PRIORITY:
-        default:
-            priority = 0;
-            break;
-        }
-
-        switch( obj->pinIndex )
-        {
-        case GPIO_PIN_0:
-        case GPIO_PIN_1:
-            IRQnb = EXTI0_1_IRQn;
-            break;
-        case GPIO_PIN_2:
-        case GPIO_PIN_3:
-            IRQnb = EXTI2_3_IRQn;
-            break;
-        case GPIO_PIN_4:
-        case GPIO_PIN_5:
-        case GPIO_PIN_6:
-        case GPIO_PIN_7:
-        case GPIO_PIN_8:
-        case GPIO_PIN_9:
-        case GPIO_PIN_10:
-        case GPIO_PIN_11:
-        case GPIO_PIN_12:
-        case GPIO_PIN_13:
-        case GPIO_PIN_14:
-        case GPIO_PIN_15:
-            IRQnb = EXTI4_15_IRQn;
-            break;
-        default:
-            break;
-        }
-
-        GpioIrq[( obj->pin ) & 0x0F] = obj;
-
-        HAL_NVIC_SetPriority( IRQnb , priority, 0 );
-        HAL_NVIC_EnableIRQ( IRQnb );
-    }
-    else
-    {
-#if defined( BOARD_IOE_EXT )
-        // IOExt Pin
-        GpioIoeSetInterrupt( obj, irqMode, irqPriority, irqHandler );
-#endif
-    }
-    */
+    // Cater to this stack's metadata
+    obj->IrqHandler = irqHandler;
+    GpioIrq[( obj->pin ) & 0x0F] = obj;
 }
 
 /*
@@ -270,32 +154,10 @@ void GpioMcuRemoveInterrupt( Gpio_t *obj )
 
 void GpioMcuWrite( Gpio_t *obj, uint32_t value )
 {
-#ifdef SHOW_UNIMPLEMENTED
-    #error "Implement Me"
-#endif
+    configASSERT(obj);
+    CheckNrfPin(obj->pinIndex);
 
-/*
-    if( obj->pin < IOE_0 )
-    {
-        if( obj == NULL )
-        {
-            assert_param( FAIL );
-        }
-        // Check if pin is not connected
-        if( obj->pin == NC )
-        {
-            return;
-        }
-        HAL_GPIO_WritePin( obj->port, obj->pinIndex , ( GPIO_PinState )value );
-    }
-    else
-    {
-#if defined( BOARD_IOE_EXT )
-        // IOExt Pin
-        GpioIoeWrite( obj, value );
-#endif
-    }
-    */
+    nrf_gpio_pin_write(obj->pinIndex, value);
 }
 
 /*
@@ -327,33 +189,10 @@ void GpioMcuToggle( Gpio_t *obj )
 
 uint32_t GpioMcuRead( Gpio_t *obj )
 {
-#ifdef SHOW_UNIMPLEMENTED
-    #error "Implement Me"
-#endif
-/*
-    if( obj->pin < IOE_0 )
-    {
-        if( obj == NULL )
-        {
-            assert_param( FAIL );
-        }
-        // Check if pin is not connected
-        if( obj->pin == NC )
-        {
-            return 0;
-        }
-        return HAL_GPIO_ReadPin( obj->port, obj->pinIndex );
-    }
-    else
-    {
-#if defined( BOARD_IOE_EXT )
-        // IOExt Pin
-        return GpioIoeRead( obj );
-#else
-        return 0;
-#endif
-    }
-    */
+    configASSERT(obj);
+    CheckNrfPin(obj->pinIndex);
+    
+    return nrf_gpio_pin_read(obj->pinIndex);
 }
 
 /*

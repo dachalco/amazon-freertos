@@ -20,66 +20,47 @@
  *
  * \author    Gregory Cristian ( Semtech )
  */
+#include "FreeRTOS.h"
 #include "utilities.h"
 #include "board.h"
+#include "board-config.h"
 #include "gpio.h"
 #include "spi.h"
+#include "nrfx_spim.h"
+#include "nrf_gpio.h"
+
+#define SPI_INSTANCE  0                                           /**< SPI instance index. */
+static const nrfx_spim_t spim_instance = NRFX_SPIM_INSTANCE(SPI_INSTANCE);  /**< SPI instance. */
+static volatile bool spi_xfer_done = true;  /**< Flag used to indicate that SPI instance completed the transfer. */
 
 
+// Their SPI driver is synchronous, this one resuses nrf's spim APIs which are async. Need to accumulate data then flag when done
+void spim_event_handler(nrfx_spim_evt_t const * pxEvent, void * pvContext)
+{
+    printf("yep\n");
+    spi_xfer_done = true;
+}
 
+/* Current demo setup will only allow use of SPI_1. 
+   Additionally, there will only be one device in slave chain, so this will not use NSS pin */
 void SpiInit( Spi_t *obj, SpiId_t spiId, PinNames mosi, PinNames miso, PinNames sclk, PinNames nss )
 {
-#ifdef SHOW_UNIMPLEMENTED
-    #error "Implement Me"
-#endif
-
-/*
-    CRITICAL_SECTION_BEGIN( );
-
+    configASSERT(obj && spiId == SPI_1);
+    //CRITICAL_SECTION_BEGIN( );
+    
+    // Honor existing metadata
     obj->SpiId = spiId;
 
-    if( spiId == SPI_1 )
-    {
-        __HAL_RCC_SPI1_FORCE_RESET( );
-        __HAL_RCC_SPI1_RELEASE_RESET( );
-        __HAL_RCC_SPI1_CLK_ENABLE( );
+    // Configure/Init nrf spi instance
+    nrfx_spim_config_t spim_config = NRFX_SPIM_DEFAULT_CONFIG;
+    spim_config.frequency          = NRF_SPIM_FREQ_8M; // May need to adjust this. Although, the datasheet does say "up to" 16 MHz
+    spim_config.miso_pin           = RADIO_MISO;
+    spim_config.mosi_pin           = RADIO_MOSI;
+    spim_config.sck_pin            = RADIO_SCLK;
+    configASSERT(NRF_SUCCESS == nrfx_spim_init(&spim_instance, &spim_config, spim_event_handler, NULL));
 
-        SpiHandle[spiId].Instance = ( SPI_TypeDef* )SPI1_BASE;
 
-        GpioInit( &obj->Mosi, mosi, PIN_ALTERNATE_FCT, PIN_PUSH_PULL, PIN_PULL_DOWN, GPIO_AF0_SPI1 );
-        GpioInit( &obj->Miso, miso, PIN_ALTERNATE_FCT, PIN_PUSH_PULL, PIN_PULL_DOWN, GPIO_AF0_SPI1 );
-        GpioInit( &obj->Sclk, sclk, PIN_ALTERNATE_FCT, PIN_PUSH_PULL, PIN_PULL_DOWN, GPIO_AF0_SPI1 );
-        GpioInit( &obj->Nss, nss, PIN_ALTERNATE_FCT, PIN_PUSH_PULL, PIN_PULL_UP, GPIO_AF0_SPI1 );
-    }
-    else
-    {
-        __HAL_RCC_SPI2_FORCE_RESET( );
-        __HAL_RCC_SPI2_RELEASE_RESET( );
-        __HAL_RCC_SPI2_CLK_ENABLE( );
-
-        SpiHandle[spiId].Instance = ( SPI_TypeDef* )SPI2_BASE;
-
-        GpioInit( &obj->Mosi, mosi, PIN_ALTERNATE_FCT, PIN_PUSH_PULL, PIN_PULL_DOWN, GPIO_AF0_SPI2 );
-        GpioInit( &obj->Miso, miso, PIN_ALTERNATE_FCT, PIN_PUSH_PULL, PIN_PULL_DOWN, GPIO_AF0_SPI2 );
-        GpioInit( &obj->Sclk, sclk, PIN_ALTERNATE_FCT, PIN_PUSH_PULL, PIN_PULL_DOWN, GPIO_AF0_SPI2 );
-        GpioInit( &obj->Nss, nss, PIN_ALTERNATE_FCT, PIN_PUSH_PULL, PIN_PULL_UP, GPIO_AF0_SPI2 );
-    }
-
-    if( nss == NC )
-    {
-        SpiHandle[spiId].Init.NSS = SPI_NSS_SOFT;
-        SpiFormat( obj, SPI_DATASIZE_8BIT, SPI_POLARITY_LOW, SPI_PHASE_1EDGE, 0 );
-    }
-    else
-    {
-        SpiFormat( obj, SPI_DATASIZE_8BIT, SPI_POLARITY_LOW, SPI_PHASE_1EDGE, 1 );
-    }
-    SpiFrequency( obj, 10000000 );
-
-    HAL_SPI_Init( &SpiHandle[spiId] );
-
-    CRITICAL_SECTION_END( );
-    */
+    //CRITICAL_SECTION_END();
 }
 
 /*
@@ -148,31 +129,21 @@ void SpiFrequency( Spi_t *obj, uint32_t hz )
 
 uint16_t SpiInOut( Spi_t *obj, uint16_t outData )
 {
-#ifdef SHOW_UNIMPLEMENTED
-    #error "Implement Me"
-#endif
+    configASSERT(obj);
+    
+    // Configure transaction to send and receive byte.
+    uint8_t txByte = outData & 0xFF;
+    uint8_t rxByte = 0;
+    nrfx_spim_xfer_desc_t xfer_desc = NRFX_SPIM_XFER_TRX(&txByte, sizeof(txByte), &rxByte, sizeof(rxByte));
 
-/*
-    uint8_t rxData = 0;
-
-    if( ( obj == NULL ) || ( SpiHandle[obj->SpiId].Instance ) == NULL )
+    // Send then wait until transfer is complete, as the other ports do
+    spi_xfer_done = false;
+    configASSERT(NRF_SUCCESS == nrfx_spim_xfer(&spim_instance, &xfer_desc, NULL));
+    while (!spi_xfer_done) 
     {
-        assert_param( FAIL );
+        __WFE(); // Enter low-power state until event occurs
     }
 
-    __HAL_SPI_ENABLE( &SpiHandle[obj->SpiId] );
-
-    CRITICAL_SECTION_BEGIN( );
-
-    while( __HAL_SPI_GET_FLAG( &SpiHandle[obj->SpiId], SPI_FLAG_TXE ) == RESET );
-    SpiHandle[obj->SpiId].Instance->DR = ( uint16_t ) ( outData & 0xFF );
-
-    while( __HAL_SPI_GET_FLAG( &SpiHandle[obj->SpiId], SPI_FLAG_RXNE ) == RESET );
-    rxData = ( uint16_t ) SpiHandle[obj->SpiId].Instance->DR;
-
-    CRITICAL_SECTION_END( );
-
-    return( rxData );
-*/
+    return rxByte;
 }
 

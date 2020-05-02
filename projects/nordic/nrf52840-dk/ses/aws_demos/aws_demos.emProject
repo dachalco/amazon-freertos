@@ -601,6 +601,8 @@
               <file file_name="../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/drivers/src/nrfx_uart.c" />
               <file file_name="../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/drivers/src/nrfx_uarte.c" />
               <file file_name="../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/drivers/src/nrfx_wdt.c" />
+              <file file_name="../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/drivers/src/nrfx_spim.c" />
+              <file file_name="../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/drivers/src/nrfx_spis.c" />
             </folder>
           </folder>
           <folder Name="hal">
@@ -665,6 +667,7 @@
         </folder>
         <folder Name="spi">
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/spi-board.c" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/spi-board.h" />
         </folder>
         <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/sx1262mbxcas-board.c" />
         <folder Name="system">
