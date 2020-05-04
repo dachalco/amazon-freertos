@@ -3150,13 +3150,11 @@
 
 // <e> NRFX_SPIM_ENABLED - nrfx_spim - SPIM peripheral driver
 //==========================================================
-#define NRFX_SPIM_ENABLED 1
 #ifndef NRFX_SPIM_ENABLED
-#define NRFX_SPIM_ENABLED 0
+#define NRFX_SPIM_ENABLED 1
 #endif
 // <q> NRFX_SPIM0_ENABLED  - Enable SPIM0 instance
 
-#define NRFX_SPIM0_ENABLED 1
 #ifndef NRFX_SPIM0_ENABLED
 #define NRFX_SPIM0_ENABLED 0
 #endif
@@ -3376,6 +3374,7 @@
 
 // <e> NRFX_SPI_ENABLED - nrfx_spi - SPI peripheral driver
 //==========================================================
+#define NRFX_SPI_ENABLED 1
 #ifndef NRFX_SPI_ENABLED
 #define NRFX_SPI_ENABLED 0
 #endif

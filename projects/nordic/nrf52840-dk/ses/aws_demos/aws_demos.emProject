@@ -603,6 +603,7 @@
               <file file_name="../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/drivers/src/nrfx_wdt.c" />
               <file file_name="../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/drivers/src/nrfx_spim.c" />
               <file file_name="../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/drivers/src/nrfx_spis.c" />
+              <file file_name="../../../../../vendors/nordic/nRF5_SDK_15.2.0/integration/nrfx/legacy/nrf_drv_spi.c" />
             </folder>
           </folder>
           <folder Name="hal">

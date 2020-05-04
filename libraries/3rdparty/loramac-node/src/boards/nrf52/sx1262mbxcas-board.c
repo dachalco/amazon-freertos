@@ -45,9 +45,13 @@ Gpio_t DbgPinRx;
 void SX126xIoInit( void )
 {
     GpioInit( &SX126x.Spi.Nss, RADIO_NSS, PIN_OUTPUT, PIN_PUSH_PULL, PIN_NO_PULL, 1 );
-    GpioInit( &SX126x.BUSY, RADIO_BUSY, PIN_INPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
+    //GpioInit( &SX126x.BUSY, RADIO_BUSY, PIN_INPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
+    GpioInit( &SX126x.BUSY, RADIO_BUSY, PIN_INPUT, PIN_PUSH_PULL, PIN_PULL_DOWN, 0 );
     GpioInit( &SX126x.DIO1, RADIO_DIO_1, PIN_INPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
+    GpioInit( &SX126x.Reset, RADIO_RESET, PIN_OUTPUT, PIN_PUSH_PULL, PIN_NO_PULL, 1 ); // It's active low
+   
     GpioInit( &DeviceSel, RADIO_DEVICE_SEL, PIN_INPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
+
 }
 
 void SX126xIoIrqInit( DioIrqHandler dioIrq )
@@ -83,9 +87,11 @@ uint32_t SX126xGetBoardTcxoWakeupTime( void )
 void SX126xReset( void )
 {
     DelayMs( 10 );
-    GpioInit( &SX126x.Reset, RADIO_RESET, PIN_OUTPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
+    //GpioInit( &SX126x.Reset, RADIO_RESET, PIN_OUTPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
+    GpioWrite(&SX126x.Reset, 0);
     DelayMs( 20 );
-    GpioInit( &SX126x.Reset, RADIO_RESET, PIN_ANALOGIC, PIN_PUSH_PULL, PIN_NO_PULL, 0 ); // internal pull-up
+    //GpioInit( &SX126x.Reset, RADIO_RESET, PIN_ANALOGIC, PIN_PUSH_PULL, PIN_NO_PULL, 0 ); // internal pull-up
+    GpioWrite(&SX126x.Reset, 1);
     DelayMs( 10 );
 }
 
@@ -96,7 +102,7 @@ void SX126xWaitOnBusy( void )
 
 void SX126xWakeup( void )
 {
-    CRITICAL_SECTION_BEGIN( );
+   //CRITICAL_SECTION_BEGIN( );
 
     GpioWrite( &SX126x.Spi.Nss, 0 );
 
@@ -108,7 +114,7 @@ void SX126xWakeup( void )
     // Wait for chip to be ready.
     SX126xWaitOnBusy( );
 
-    CRITICAL_SECTION_END( );
+    //CRITICAL_SECTION_END( );
 }
 
 void SX126xWriteCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size )

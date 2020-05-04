@@ -26,18 +26,20 @@
 #include "board-config.h"
 #include "gpio.h"
 #include "spi.h"
-#include "nrfx_spim.h"
+#include "nrf_drv_spi.h"
 #include "nrf_gpio.h"
 
 #define SPI_INSTANCE  0                                           /**< SPI instance index. */
-static const nrfx_spim_t spim_instance = NRFX_SPIM_INSTANCE(SPI_INSTANCE);  /**< SPI instance. */
+static const nrf_drv_spi_t spi_instance = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);  /**< SPI instance. */
 static volatile bool spi_xfer_done = true;  /**< Flag used to indicate that SPI instance completed the transfer. */
 
+// Debug metrics
+static uint32_t n_transfers = 0;
 
 // Their SPI driver is synchronous, this one resuses nrf's spim APIs which are async. Need to accumulate data then flag when done
-void spim_event_handler(nrfx_spim_evt_t const * pxEvent, void * pvContext)
+void spi_event_handler(nrf_drv_spi_evt_t const * pxEvent, void * pvContext)
 {
-    printf("yep\n");
+    n_transfers++;
     spi_xfer_done = true;
 }
 
@@ -51,13 +53,15 @@ void SpiInit( Spi_t *obj, SpiId_t spiId, PinNames mosi, PinNames miso, PinNames 
     // Honor existing metadata
     obj->SpiId = spiId;
 
+
     // Configure/Init nrf spi instance
-    nrfx_spim_config_t spim_config = NRFX_SPIM_DEFAULT_CONFIG;
-    spim_config.frequency          = NRF_SPIM_FREQ_8M; // May need to adjust this. Although, the datasheet does say "up to" 16 MHz
-    spim_config.miso_pin           = RADIO_MISO;
-    spim_config.mosi_pin           = RADIO_MOSI;
-    spim_config.sck_pin            = RADIO_SCLK;
-    configASSERT(NRF_SUCCESS == nrfx_spim_init(&spim_instance, &spim_config, spim_event_handler, NULL));
+    nrfx_spi_config_t spi_config = NRFX_SPI_DEFAULT_CONFIG;
+    spi_config.frequency          = NRF_SPI_FREQ_8M; 
+    spi_config.miso_pin           = RADIO_MISO;
+    spi_config.mosi_pin           = RADIO_MOSI;
+    spi_config.sck_pin            = RADIO_SCLK;
+    spi_config.ss_pin             = NRF_DRV_SPI_PIN_NOT_USED;
+    configASSERT(NRF_SUCCESS == nrf_drv_spi_init(&spi_instance, &spi_config, spi_event_handler, NULL));
 
 
     //CRITICAL_SECTION_END();
@@ -134,11 +138,10 @@ uint16_t SpiInOut( Spi_t *obj, uint16_t outData )
     // Configure transaction to send and receive byte.
     uint8_t txByte = outData & 0xFF;
     uint8_t rxByte = 0;
-    nrfx_spim_xfer_desc_t xfer_desc = NRFX_SPIM_XFER_TRX(&txByte, sizeof(txByte), &rxByte, sizeof(rxByte));
-
-    // Send then wait until transfer is complete, as the other ports do
     spi_xfer_done = false;
-    configASSERT(NRF_SUCCESS == nrfx_spim_xfer(&spim_instance, &xfer_desc, NULL));
+    configASSERT(NRF_SUCCESS == nrf_drv_spi_transfer(&spi_instance,
+                                                     &txByte, sizeof(txByte),
+                                                     &rxByte, sizeof(rxByte)));
     while (!spi_xfer_done) 
     {
         __WFE(); // Enter low-power state until event occurs

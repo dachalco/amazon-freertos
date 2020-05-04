@@ -141,6 +141,8 @@ void init_SX1262_Shield()
 
 void SX1262_ISR()
 {
+    printf("radio irq fired\n");
+    while(1);
 }
 
 static TaskHandle_t mTask_lora = NULL;

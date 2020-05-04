@@ -90,7 +90,8 @@ void GpioMcuInit( Gpio_t *obj, uint16_t pinIndex, PinModes mode, PinConfigs conf
            the chip's reset HIGH. They had a quirky way of assigning a pull-up resistor....which for consistency is replicated for nrf52 */
         if (pinIndex == RADIO_RESET) 
         {
-            nrf_gpio_cfg_input(pinIndex, NRF_GPIO_PIN_PULLUP);
+            //nrf_gpio_cfg_input(pinIndex, NRF_GPIO_PIN_PULLUP);
+            GpioMcuInit(obj, pinIndex, PIN_OUTPUT, config, type, 1);
         }
         else
         {
