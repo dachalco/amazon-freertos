@@ -52,6 +52,9 @@
 #include "board-config.h"
 #include "spi.h"
 #include "sx126x-board.h"
+#include "LoRaMac.h"
+
+#define ACTIVE_REGION LORAMAC_REGION_US915
 
 /* Forward declaration of demo entry function to be renamed from #define in aws_demo_config.h */
 int DEMO_entryFUNCTION( bool awsIotMqttMode,
@@ -145,6 +148,32 @@ void SX1262_ISR()
     while(1);
 }
 
+
+void McpsConfirm()
+{
+    while(1);
+}
+
+void McpsIndication()
+{
+    while(1);
+}
+
+void MlmeConfirm()
+{
+    while(1);
+}
+
+void MlmeIndication()
+{
+    while(1);
+}
+
+void OnMacProcessNotify()
+{
+    while(1);
+}
+
 static TaskHandle_t mTask_lora = NULL;
 void lora_test_entry()
 {
@@ -153,17 +182,38 @@ void lora_test_entry()
     configASSERT(NRF_SUCCESS == nrf_drv_gpiote_init());
 
 
-
-    printf("Initializing chip...");
+    printf("Initializing...");
     SpiInit(&SX126x.Spi, SPI_1, RADIO_MOSI, RADIO_MISO, RADIO_SCLK, NC );
     SX126xIoInit();
-    SX126xInit(SX1262_ISR);
+
+    LoRaMacPrimitives_t macPrimitives;
+    LoRaMacCallback_t macCallbacks;
+    macPrimitives.MacMcpsConfirm = McpsConfirm;
+    macPrimitives.MacMcpsIndication = McpsIndication;
+    macPrimitives.MacMlmeConfirm = MlmeConfirm;
+    macPrimitives.MacMlmeIndication = MlmeIndication;
+    macCallbacks.GetBatteryLevel = NULL;
+    macCallbacks.GetTemperatureLevel = NULL;
+    macCallbacks.NvmContextChange = NULL;
+    macCallbacks.MacProcessNotify = OnMacProcessNotify;
+    LoRaMacInitialization( &macPrimitives, &macCallbacks, ACTIVE_REGION );
+
     printf("Done.\n");
     
+
+    // Start the routine. Report on status
     const TickType_t xSleepTick = 2000 / portTICK_PERIOD_MS;
     TickType_t count = 0;
+    uint8_t  chip_cmd_status = 0;
+    RadioError_t chip_errors = { 0 };
     while(1)
     {
+        // Report chip status and errors
+        printf("Status: %2x\n", SX126xReadCommand( RADIO_GET_STATUS, NULL, 0 ));
+        chip_errors = SX126xGetDeviceErrors();
+        printf("Errors: %4x\n", chip_errors.Value);
+        
+        // Status aesthetics
         nrf_gpio_pin_toggle(SX1262_PIN_LED);
         printf(".");
         if (count % 10) 

@@ -20,6 +20,7 @@
  *
  * \author    Gregory Cristian ( Semtech )
  */
+#include "FreeRTOS.h"
 #include "utilities.h"
 #include "board.h"
 #include "rtc-board.h"
@@ -83,6 +84,7 @@ static void TimerSetTimeout( TimerEvent_t *obj );
  */
 static bool TimerExists( TimerEvent_t *obj );
 
+
 void TimerInit( TimerEvent_t *obj, void ( *callback )( void *context ) )
 {
     obj->Timestamp = 0;
@@ -94,10 +96,12 @@ void TimerInit( TimerEvent_t *obj, void ( *callback )( void *context ) )
     obj->Next = NULL;
 }
 
+#if 0
 void TimerSetContext( TimerEvent_t *obj, void* context )
 {
     obj->Context = context;
 }
+#endif
 
 void TimerStart( TimerEvent_t *obj )
 {
@@ -136,7 +140,9 @@ void TimerStart( TimerEvent_t *obj )
         }
     }
     CRITICAL_SECTION_END( );
+
 }
+
 
 static void TimerInsertTimer( TimerEvent_t *obj )
 {
@@ -161,6 +167,7 @@ static void TimerInsertTimer( TimerEvent_t *obj )
     obj->Next = NULL;
 }
 
+
 static void TimerInsertNewHeadTimer( TimerEvent_t *obj )
 {
     TimerEvent_t* cur = TimerListHead;
@@ -174,6 +181,8 @@ static void TimerInsertNewHeadTimer( TimerEvent_t *obj )
     TimerListHead = obj;
     TimerSetTimeout( TimerListHead );
 }
+
+#if 0
 
 bool TimerIsStarted( TimerEvent_t *obj )
 {
@@ -231,6 +240,7 @@ void TimerIrqHandler( void )
         TimerSetTimeout( TimerListHead );
     }
 }
+#endif
 
 void TimerStop( TimerEvent_t *obj )
 {
@@ -304,6 +314,7 @@ void TimerStop( TimerEvent_t *obj )
     CRITICAL_SECTION_END( );
 }
 
+
 static bool TimerExists( TimerEvent_t *obj )
 {
     TimerEvent_t* cur = TimerListHead;
@@ -343,6 +354,7 @@ void TimerSetValue( TimerEvent_t *obj, uint32_t value )
     obj->ReloadValue = ticks;
 }
 
+
 TimerTime_t TimerGetCurrentTime( void )
 {
     uint32_t now = RtcGetTimerValue( );
@@ -362,6 +374,8 @@ TimerTime_t TimerGetElapsedTime( TimerTime_t past )
     return RtcTick2Ms( nowInTicks - pastInTicks );
 }
 
+
+
 static void TimerSetTimeout( TimerEvent_t *obj )
 {
     int32_t minTicks= RtcGetMinimumTimeout( );
@@ -375,6 +389,7 @@ static void TimerSetTimeout( TimerEvent_t *obj )
     RtcSetAlarm( obj->Timestamp );
 }
 
+#if 0 
 TimerTime_t TimerTempCompensation( TimerTime_t period, float temperature )
 {
     return RtcTempCompensation( period, temperature );
@@ -384,3 +399,4 @@ void TimerProcess( void )
 {
     RtcProcess( );
 }
+#endif
