@@ -174,13 +174,76 @@ void OnMacProcessNotify()
     while(1);
 }
 
+/*!
+ * MAC status strings
+ */
+const char* MacStatusStrings[] =
+{
+    "OK",                            // LORAMAC_STATUS_OK
+    "Busy",                          // LORAMAC_STATUS_BUSY
+    "Service unknown",               // LORAMAC_STATUS_SERVICE_UNKNOWN
+    "Parameter invalid",             // LORAMAC_STATUS_PARAMETER_INVALID
+    "Frequency invalid",             // LORAMAC_STATUS_FREQUENCY_INVALID
+    "Datarate invalid",              // LORAMAC_STATUS_DATARATE_INVALID
+    "Frequency or datarate invalid", // LORAMAC_STATUS_FREQ_AND_DR_INVALID
+    "No network joined",             // LORAMAC_STATUS_NO_NETWORK_JOINED
+    "Length error",                  // LORAMAC_STATUS_LENGTH_ERROR
+    "Region not supported",          // LORAMAC_STATUS_REGION_NOT_SUPPORTED
+    "Skipped APP data",              // LORAMAC_STATUS_SKIPPED_APP_DATA
+    "Duty-cycle restricted",         // LORAMAC_STATUS_DUTYCYCLE_RESTRICTED
+    "No channel found",              // LORAMAC_STATUS_NO_CHANNEL_FOUND
+    "No free channel found",         // LORAMAC_STATUS_NO_FREE_CHANNEL_FOUND
+    "Busy beacon reserved time",     // LORAMAC_STATUS_BUSY_BEACON_RESERVED_TIME
+    "Busy ping-slot window time",    // LORAMAC_STATUS_BUSY_PING_SLOT_WINDOW_TIME
+    "Busy uplink collision",         // LORAMAC_STATUS_BUSY_UPLINK_COLLISION
+    "Crypto error",                  // LORAMAC_STATUS_CRYPTO_ERROR
+    "FCnt handler error",            // LORAMAC_STATUS_FCNT_HANDLER_ERROR
+    "MAC command error",             // LORAMAC_STATUS_MAC_COMMAD_ERROR
+    "ClassB error",                  // LORAMAC_STATUS_CLASS_B_ERROR
+    "Confirm queue error",           // LORAMAC_STATUS_CONFIRM_QUEUE_ERROR
+    "Multicast group undefined",     // LORAMAC_STATUS_MC_GROUP_UNDEFINED
+    "Unknown error",                 // LORAMAC_STATUS_ERROR
+};
+
+/*!
+ * Executes the network Join request
+ */
+#define LORAWAN_DEFAULT_DATARATE                    DR_0
+static bool JoinNetwork( void )
+{
+    LoRaMacStatus_t status;
+    MlmeReq_t mlmeReq;
+    mlmeReq.Type = MLME_JOIN;
+    mlmeReq.Req.Join.Datarate = LORAWAN_DEFAULT_DATARATE;
+
+    // Starts the join procedure
+    status = LoRaMacMlmeRequest( &mlmeReq );
+    printf( "\n###### ===== MLME-Request - MLME_JOIN ==== ######\n" );
+    printf( "STATUS      : %s\n", MacStatusStrings[status] );
+
+    if( status == LORAMAC_STATUS_OK )
+    {
+        printf( "###### ===== JOINING ==== ######\n" );
+        return true;
+    }
+    else
+    {
+        if( status == LORAMAC_STATUS_DUTYCYCLE_RESTRICTED )
+        {
+            printf( "Next Tx in  : ~%lu second(s)\n", ( mlmeReq.ReqReturn.DutyCycleWaitTime / 1000 ) );
+        }
+        return false;
+        //configASSERT(0);
+    }
+}
+
+
 static TaskHandle_t mTask_lora = NULL;
 void lora_test_entry()
 {
 
     // Radio's DIO1 will route irq line through gpio, hence gpiote
     configASSERT(NRF_SUCCESS == nrf_drv_gpiote_init());
-
 
     printf("Initializing...");
     SpiInit(&SX126x.Spi, SPI_1, RADIO_MOSI, RADIO_MISO, RADIO_SCLK, NC );
@@ -196,10 +259,18 @@ void lora_test_entry()
     macCallbacks.GetTemperatureLevel = NULL;
     macCallbacks.NvmContextChange = NULL;
     macCallbacks.MacProcessNotify = OnMacProcessNotify;
-    LoRaMacInitialization( &macPrimitives, &macCallbacks, ACTIVE_REGION );
+    LoRaMacStatus_t status = LoRaMacInitialization( &macPrimitives, &macCallbacks, ACTIVE_REGION );
+    if ( status != LORAMAC_STATUS_OK )
+    {
+        printf( "LoRaMac wasn't properly initialized, error: %s", MacStatusStrings[status] );
+        // Fatal error, endless loop.
+        configASSERT(0);
+    } else {
+           printf("SUCCESS.\n");
+    }
 
-    printf("Done.\n");
-    
+    //
+    JoinNetwork();
 
     // Start the routine. Report on status
     const TickType_t xSleepTick = 2000 / portTICK_PERIOD_MS;
@@ -212,6 +283,7 @@ void lora_test_entry()
         printf("Status: %2x\n", SX126xReadCommand( RADIO_GET_STATUS, NULL, 0 ));
         chip_errors = SX126xGetDeviceErrors();
         printf("Errors: %4x\n", chip_errors.Value);
+        JoinNetwork();
         
         // Status aesthetics
         nrf_gpio_pin_toggle(SX1262_PIN_LED);

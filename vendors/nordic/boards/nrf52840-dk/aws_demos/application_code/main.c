@@ -337,8 +337,6 @@ static void prvMiscInitialization( void )
 }
 /*-----------------------------------------------------------*/
 
-
-
 /**
  * @brief Application runtime entry point.
  */
