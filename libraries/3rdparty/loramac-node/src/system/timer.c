@@ -105,6 +105,9 @@ void TimerSetContext( TimerEvent_t *obj, void* context )
 
 void TimerStart( TimerEvent_t *obj )
 {
+
+    configASSERT(0); // For the demo use FreeRTOS Timer API!
+
     uint32_t elapsedTime = 0;
 
     CRITICAL_SECTION_BEGIN( );

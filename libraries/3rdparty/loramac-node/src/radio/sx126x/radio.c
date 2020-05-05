@@ -20,6 +20,9 @@
  *
  * \author    Gregory Cristian ( Semtech )
  */
+#include "FreeRTOS.h"
+#include "timers.h"
+
 #include <math.h>
 #include <string.h>
 #include "utilities.h"
@@ -479,8 +482,32 @@ SX126x_t SX126x;
 /*!
  * Tx and Rx timers
  */
-TimerEvent_t TxTimeoutTimer;
-TimerEvent_t RxTimeoutTimer;
+
+TimerHandle_t TxTimeoutTimer = NULL;
+TimerHandle_t RxTimeoutTimer = NULL;
+
+static void 
+FreeRTOS_TimerSetValue(TimerHandle_t xTimer, uint32_t milliseconds)
+{
+   // No reason to block upon call, hence 0 block time. Enforce success because failure cases not handled here
+    configASSERT(pdPASS == xTimerChangePeriod(xTimer, milliseconds / portTICK_PERIOD_MS, 0));
+}
+static void 
+FreeRTOS_TimerStart(TimerHandle_t xTimer)
+{
+    // No reason to block upon call, hence 0 block time. Enforce success because failure cases not handled here
+    configASSERT(pdPASS == xTimerStart(xTimer, 0));
+}
+
+static void 
+FreeRTOS_TimerStop(TimerHandle_t xTimer)
+{
+    configASSERT(pdPASS == xTimerStop(xTimer, 0));
+}
+
+
+//TimerEvent_t TxTimeoutTimer;
+//TimerEvent_t RxTimeoutTimer;
 
 /*!
  * Returns the known FSK bandwidth registers value
@@ -520,9 +547,28 @@ void RadioInit( RadioEvents_t *events )
     SX126xSetTxParams( 0, RADIO_RAMP_200_US );
     SX126xSetDioIrqParams( IRQ_RADIO_ALL, IRQ_RADIO_ALL, IRQ_RADIO_NONE, IRQ_RADIO_NONE );
 
+
+    /* FreeRTOS already has a timer API */
+    TxTimeoutTimer = xTimerCreate("TxTO",
+                                  1,           // Just for initilization. Period updated later in stack, before timer starts
+                                  pdFALSE,     // One-shot
+                                  (void * ) 0, // Initialize number of times timer has expired (metadata)
+                                  RadioOnTxTimeoutIrq);  // This will need the timer context which may need updating elsewhere
+    RxTimeoutTimer = xTimerCreate("RxTO",
+                                  1,           // Just for initilization. Period updated later in stack, before timer starts
+                                  pdFALSE,     // One-shot
+                                  (void * ) 0, // Initialize number of times timer has expired (metadata)
+                                  RadioOnRxTimeoutIrq);  // This will need the timer context which may need updating elsewhere 
+    configASSERT(TxTimeoutTimer != NULL);
+    configASSERT(RxTimeoutTimer != NULL);
+
+                                      
+    /*
     // Initialize driver timeout timers
     TimerInit( &TxTimeoutTimer, RadioOnTxTimeoutIrq );
+
     TimerInit( &RxTimeoutTimer, RadioOnRxTimeoutIrq );
+    */
 
     IrqFired = false;
 }
@@ -1032,8 +1078,15 @@ void RadioSend( uint8_t *buffer, uint8_t size )
     SX126xSetPacketParams( &SX126x.PacketParams );
 
     SX126xSendPayload( buffer, size, 0 );
+
+    /* Use FreeRTOS APIs instead */
+    FreeRTOS_TimerSetValue(TxTimeoutTimer, TxTimeout);
+    FreeRTOS_TimerStart(TxTimeoutTimer);
+
+    /*
     TimerSetValue( &TxTimeoutTimer, TxTimeout );
     TimerStart( &TxTimeoutTimer );
+    */
 }
 
 void RadioSleep( void )
@@ -1060,8 +1113,12 @@ void RadioRx( uint32_t timeout )
 
     if( timeout != 0 )
     {
+        FreeRTOS_TimerSetValue( RxTimeoutTimer, timeout );
+        FreeRTOS_TimerStart( RxTimeoutTimer );
+        /*
         TimerSetValue( &RxTimeoutTimer, timeout );
         TimerStart( &RxTimeoutTimer );
+        */
     }
 
     if( RxContinuous == true )
@@ -1083,8 +1140,12 @@ void RadioRxBoosted( uint32_t timeout )
 
     if( timeout != 0 )
     {
+        FreeRTOS_TimerSetValue( RxTimeoutTimer, timeout );
+        FreeRTOS_TimerStart( RxTimeoutTimer );
+        /*
         TimerSetValue( &RxTimeoutTimer, timeout );
         TimerStart( &RxTimeoutTimer );
+        */
     }
 
     if( RxContinuous == true )
@@ -1114,8 +1175,15 @@ void RadioSetTxContinuousWave( uint32_t freq, int8_t power, uint16_t time )
     SX126xSetRfTxPower( power );
     SX126xSetTxContinuousWave( );
 
+    // FreeRTOS already has a Timers API
+    FreeRTOS_TimerSetValue(TxTimeoutTimer, time * 1000);
+    FreeRTOS_TimerStart(TxTimeoutTimer);
+
+    /*
     TimerSetValue( &TxTimeoutTimer, time  * 1000 );
     TimerStart( &TxTimeoutTimer );
+    */
+
 }
 
 int16_t RadioRssi( RadioModems_t modem )
@@ -1219,7 +1287,8 @@ void RadioIrqProcess( void )
 
         if( ( irqRegs & IRQ_TX_DONE ) == IRQ_TX_DONE )
         {
-            TimerStop( &TxTimeoutTimer );
+            FreeRTOS_TimerStop( TxTimeoutTimer );
+            //TimerStop( &TxTimeoutTimer );
             //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
             SX126xSetOperatingMode( MODE_STDBY_RC );
             if( ( RadioEvents != NULL ) && ( RadioEvents->TxDone != NULL ) )
@@ -1245,8 +1314,9 @@ void RadioIrqProcess( void )
             else
             {
                 uint8_t size;
-
-                TimerStop( &RxTimeoutTimer );
+               
+                FreeRTOS_TimerStop( RxTimeoutTimer );
+                //TimerStop( &RxTimeoutTimer );
                 if( RxContinuous == false )
                 {
                     //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
@@ -1282,7 +1352,8 @@ void RadioIrqProcess( void )
         {
             if( SX126xGetOperatingMode( ) == MODE_TX )
             {
-                TimerStop( &TxTimeoutTimer );
+                FreeRTOS_TimerStop(TxTimeoutTimer);
+                //TimerStop( &TxTimeoutTimer );
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
                 SX126xSetOperatingMode( MODE_STDBY_RC );
                 if( ( RadioEvents != NULL ) && ( RadioEvents->TxTimeout != NULL ) )
@@ -1292,7 +1363,9 @@ void RadioIrqProcess( void )
             }
             else if( SX126xGetOperatingMode( ) == MODE_RX )
             {
-                TimerStop( &RxTimeoutTimer );
+                FreeRTOS_TimerStop( RxTimeoutTimer );
+                //TimerStop( &RxTimeoutTimer );
+
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
                 SX126xSetOperatingMode( MODE_STDBY_RC );
                 if( ( RadioEvents != NULL ) && ( RadioEvents->RxTimeout != NULL ) )
@@ -1319,7 +1392,8 @@ void RadioIrqProcess( void )
 
         if( ( irqRegs & IRQ_HEADER_ERROR ) == IRQ_HEADER_ERROR )
         {
-            TimerStop( &RxTimeoutTimer );
+            FreeRTOS_TimerStop( RxTimeoutTimer );
+            //TimerStop( &RxTimeoutTimer );
             if( RxContinuous == false )
             {
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC

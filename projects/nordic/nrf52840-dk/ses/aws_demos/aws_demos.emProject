@@ -27,7 +27,7 @@
       arm_linker_heap_size="8192"
       arm_linker_stack_size="8192"
       c_preprocessor_definitions="REGION_US915"
-      c_user_include_directories=".;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/radio;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/radio/sx126x;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/system;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/boards;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/mac"
+      c_user_include_directories=".;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/radio;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/radio/sx126x;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/system;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/boards;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/mac;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/apps/LoRaMac/common;$(SolutionDir)/../../../../../libraries/3rdparty/loramac-node/src/peripherals/soft-se"
       gcc_debugging_level="Level 3"
       gcc_dwarf_version="dwarf-4" />
     <folder Name="application_code">
@@ -680,6 +680,11 @@
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/peripherals/soft-se/soft-se-hal.h" />
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/peripherals/soft-se/soft-se.c" />
         </folder>
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/mac/LoRaMac.h" />
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/mac/LoRaMacParser.c" />
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/mac/LoRaMacParser.h" />
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/mac/LoRaMacAdr.c" />
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/mac/LoRaMacAdr.h" />
       </folder>
       <folder Name="hal" />
       <folder Name="driver">
@@ -688,6 +693,7 @@
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/radio/sx126x/radio.c" />
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/radio/sx126x/sx126x.c" />
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/radio/sx126x/sx126x.h" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/radio/radio.h" />
         </folder>
         <folder Name="gpio">
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/gpio-board.h" />
