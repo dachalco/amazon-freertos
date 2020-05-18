@@ -45,8 +45,8 @@ Gpio_t DbgPinRx;
 void SX126xIoInit( void )
 {
     GpioInit( &SX126x.Spi.Nss, RADIO_NSS, PIN_OUTPUT, PIN_PUSH_PULL, PIN_NO_PULL, 1 );
-    //GpioInit( &SX126x.BUSY, RADIO_BUSY, PIN_INPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
-    GpioInit( &SX126x.BUSY, RADIO_BUSY, PIN_INPUT, PIN_PUSH_PULL, PIN_PULL_DOWN, 0 );
+    GpioInit( &SX126x.BUSY, RADIO_BUSY, PIN_INPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
+    //GpioInit( &SX126x.BUSY, RADIO_BUSY, PIN_INPUT, PIN_PUSH_PULL, PIN_PULL_DOWN, 0 );
     GpioInit( &SX126x.DIO1, RADIO_DIO_1, PIN_INPUT, PIN_PUSH_PULL, PIN_NO_PULL, 0 );
     GpioInit( &SX126x.Reset, RADIO_RESET, PIN_OUTPUT, PIN_PUSH_PULL, PIN_NO_PULL, 1 ); // It's active low
    
@@ -102,7 +102,7 @@ void SX126xWaitOnBusy( void )
 
 void SX126xWakeup( void )
 {
-   //CRITICAL_SECTION_BEGIN( );
+    CRITICAL_SECTION_BEGIN( );
 
     GpioWrite( &SX126x.Spi.Nss, 0 );
 
@@ -114,7 +114,7 @@ void SX126xWakeup( void )
     // Wait for chip to be ready.
     SX126xWaitOnBusy( );
 
-    //CRITICAL_SECTION_END( );
+    CRITICAL_SECTION_END( );
 }
 
 void SX126xWriteCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size )
@@ -136,6 +136,17 @@ void SX126xWriteCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size
     {
         SX126xWaitOnBusy( );
     }
+    //#define SHOW_RADIO_COMMANDS
+    #ifdef SHOW_RADIO_COMMANDS
+    size_t msg_len = size + 1;
+    uint8_t msg[msg_len + 1];
+    msg[0] = command;
+    memcpy(&msg[1], buffer, size);
+    msg[msg_len + 1] = '\0';
+    printf("Sending: %x\n", msg);
+    printf("\nDEBUG: Chip Status: %x\n", SX126xGetStatus());
+    printf("DEBUG: Chip Errors: %x\n", SX126xGetDeviceErrors());
+    #endif
 }
 
 uint8_t SX126xReadCommand( RadioCommands_t command, uint8_t *buffer, uint16_t size )

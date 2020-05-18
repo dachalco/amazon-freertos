@@ -3,6 +3,6 @@
 
 void DelayMsMcu( uint32_t ms )
 {
-    const TickType_t xDelay = ms / portTICK_PERIOD_MS;
+    const TickType_t xDelay = pdMS_TO_TICKS(ms);
     vTaskDelay(xDelay);
 }

@@ -59,8 +59,7 @@
 
 #define OVER_THE_AIR_ACTIVATION 1
 
-#define DEV_EUI { 0x00, 0x31, 0x7B, 0x1E, 0xEA, 0xD4, 0x76, 0x05 }
-#define APP_EUI { 0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x02, 0xD1, 0xDF }
+
 #define APP_KEY { 0xBD, 0x6D, 0x98, 0x17, 0x99, 0x1C, 0xA2, 0x6F, 0xE3, 0xE9, 0x7A, 0x4D, 0x91, 0x3A, 0x82, 0xF2 } 
 
 
@@ -256,7 +255,8 @@ static uint32_t TxDutyCycleTime;
 /*!
  * Timer to handle the application data transmission duty cycle
  */
-static TimerEvent_t TxNextPacketTimer;
+//static TimerEvent_t TxNextPacketTimer;
+static TimerHandle_t TxNextPacketTimer;
 
 /*!
  * Specifies the state of the application LED
@@ -568,7 +568,8 @@ static void OnTxNextPacketTimerEvent( void* context )
     MibRequestConfirm_t mibReq;
     LoRaMacStatus_t status;
 
-    TimerStop( &TxNextPacketTimer );
+    //TimerStop( &TxNextPacketTimer );
+    FreeRTOS_TimerStop( TxNextPacketTimer );
 
     mibReq.Type = MIB_NETWORK_ACTIVATION;
     status = LoRaMacMibGetRequestConfirm( &mibReq );
@@ -1048,14 +1049,15 @@ void lora_test_entry()
     printf("Initializing...");
     SpiInit(&SX126x.Spi, SPI_1, RADIO_MOSI, RADIO_MISO, RADIO_SCLK, NC );
     SX126xIoInit();
+    RtcInit();
 
     LoRaMacPrimitives_t macPrimitives;
     LoRaMacCallback_t macCallbacks;
     MibRequestConfirm_t mibReq;
     LoRaMacStatus_t status;
 
-    uint8_t devEui[8] = DEV_EUI;
-    uint8_t joinEui[8] = APP_EUI;
+    uint8_t devEui[8] = { 0 };
+    uint8_t joinEui[8] = { 0 };
     uint8_t sePin[4] = { 0 };                                                                          
 
     macPrimitives.MacMcpsConfirm = McpsConfirm;
@@ -1076,8 +1078,32 @@ void lora_test_entry()
            printf("SUCCESS.\n");
     }
 
-    //
-    //JoinNetwork();
+
+    // Set Dev EUI
+    mibReq.Type = MIB_DEV_EUI;
+    //uint8_t dev_eui[] = { 0x00, 0x31, 0x7B, 0x1E, 0xEA, 0xD4, 0x76, 0x05 };
+    uint8_t dev_eui[] = { 0x00, 0x99, 0x4B, 0x20, 0x69, 0x73, 0x06, 0xD1 };
+    mibReq.Param.DevEui = dev_eui;
+    LoRaMacMibSetRequestConfirm( &mibReq );
+
+    // Set App EUI
+    mibReq.Type = MIB_JOIN_EUI;
+    //uint8_t app_eui[] = { 0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x02, 0xD1, 0xDF };
+    uint8_t app_eui[] = { 0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x02, 0xF1, 0xAD };
+    mibReq.Param.JoinEui = app_eui;
+    LoRaMacMibSetRequestConfirm( &mibReq );
+
+    // Set the APP_KEY
+    mibReq.Type = MIB_APP_KEY;
+    //uint8_t app_key[] = { 0xBD, 0x6D, 0x98, 0x17, 0x99, 0x1C, 0xA2, 0x6F, 0xE3, 0xE9, 0x7A, 0x4D, 0x91, 0x3A, 0x82, 0xF2 };
+    uint8_t app_key[] = { 0x55, 0x0C, 0x24, 0x1E, 0x52, 0x87, 0xF4, 0xEC, 0xF8, 0x93, 0xC5, 0x85, 0x8B, 0x7B, 0xE6, 0x72 };
+    mibReq.Param.AppKey = app_key;
+    LoRaMacMibSetRequestConfirm( &mibReq );
+
+    // Set NWK_KEY. For some reason this stack is using it to calculate MIC for join-request. Strictly for join request, MIC should use App-Key
+    mibReq.Type = MIB_NWK_KEY;
+   LoRaMacMibSetRequestConfirm( &mibReq ); // Reuse app key
+
 
     // Start the routine. Report on status
     const TickType_t xSleepTick = 2000 / portTICK_PERIOD_MS;
@@ -1141,7 +1167,14 @@ void lora_test_entry()
 
           case DEVICE_STATE_START:
           {
-              TimerInit( &TxNextPacketTimer, OnTxNextPacketTimerEvent );
+              //TimerInit( &TxNextPacketTimer, OnTxNextPacketTimerEvent );
+              TxNextPacketTimer = xTimerCreate("TxNxt",
+                                                1,           // Just for initilization. Period updated later in stack, before timer starts
+                                                pdFALSE,     // One-shot
+                                                (void * ) 0, // Initialize number of times timer has expired (metadata)
+                                                OnTxNextPacketTimerEvent); 
+              configASSERT(TxNextPacketTimer != NULL);
+                                               
 
               // TimerInit( &Led1Timer, OnLed1TimerEvent );
               //TimerSetValue( &Led1Timer, 25 );
@@ -1251,8 +1284,12 @@ void lora_test_entry()
               }
 
               // Schedule next packet transmission
+              /*
               TimerSetValue( &TxNextPacketTimer, TxDutyCycleTime );
               TimerStart( &TxNextPacketTimer );
+              */
+              FreeRTOS_TimerSetValue( TxNextPacketTimer, TxDutyCycleTime );
+              FreeRTOS_TimerStart( TxNextPacketTimer );
               break;
           }
           case DEVICE_STATE_SLEEP:
@@ -1265,7 +1302,7 @@ void lora_test_entry()
               }
               else
               {
-                  __WFE();
+                  //__WFE();
                   //configASSERT(0);
                   // The MCU wakes up through events
                   //BoardLowPowerHandler( );
@@ -1282,7 +1319,7 @@ void lora_test_entry()
 
         // Status aesthetics
         nrf_gpio_pin_toggle(SX1262_PIN_LED);
-        vTaskDelay(xSleepTick);
+        //vTaskDelay(xSleepTick);
     }
 
     vTaskDelete(NULL);

@@ -29,6 +29,8 @@
 #include "nrf_drv_spi.h"
 #include "nrf_gpio.h"
 
+#define LOCAL_USE_BLOCKING_SPIM 1
+
 #define SPI_INSTANCE  0                                           /**< SPI instance index. */
 static const nrf_drv_spi_t spi_instance = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);  /**< SPI instance. */
 static volatile bool spi_xfer_done = true;  /**< Flag used to indicate that SPI instance completed the transfer. */
@@ -36,12 +38,14 @@ static volatile bool spi_xfer_done = true;  /**< Flag used to indicate that SPI 
 // Debug metrics
 static uint32_t n_transfers = 0;
 
+
+
 // Their SPI driver is synchronous, this one resuses nrf's spim APIs which are async. Need to accumulate data then flag when done
-void spi_event_handler(nrf_drv_spi_evt_t const * pxEvent, void * pvContext)
-{
-    n_transfers++;
-    spi_xfer_done = true;
-}
+//void spi_event_handler(nrf_drv_spi_evt_t const * pxEvent, void * pvContext)
+//{
+//    n_transfers++;
+//    spi_xfer_done = true;
+//}
 
 /* Current demo setup will only allow use of SPI_1. 
    Additionally, there will only be one device in slave chain, so this will not use NSS pin */
@@ -56,12 +60,18 @@ void SpiInit( Spi_t *obj, SpiId_t spiId, PinNames mosi, PinNames miso, PinNames 
 
     // Configure/Init nrf spi instance
     nrfx_spi_config_t spi_config = NRFX_SPI_DEFAULT_CONFIG;
-    spi_config.frequency          = NRF_SPI_FREQ_8M; 
+    spi_config.frequency          = NRF_SPI_FREQ_1M; 
     spi_config.miso_pin           = RADIO_MISO;
     spi_config.mosi_pin           = RADIO_MOSI;
     spi_config.sck_pin            = RADIO_SCLK;
     spi_config.ss_pin             = NRF_DRV_SPI_PIN_NOT_USED;
-    configASSERT(NRF_SUCCESS == nrf_drv_spi_init(&spi_instance, &spi_config, spi_event_handler, NULL));
+
+    #if LOCAL_USE_BLOCKING_SPIM
+        // Leaving event handler NULL makes the xfer API blocking, not requiring interrupts
+        configASSERT(NRF_SUCCESS == nrf_drv_spi_init(&spi_instance, &spi_config, NULL, NULL));
+    #else
+        configASSERT(NRF_SUCCESS == nrf_drv_spi_init(&spi_instance, &spi_config, spi_event_handler, NULL));
+    #endif
 
 
     //CRITICAL_SECTION_END();
@@ -136,16 +146,25 @@ uint16_t SpiInOut( Spi_t *obj, uint16_t outData )
     configASSERT(obj);
     
     // Configure transaction to send and receive byte.
-    uint8_t txByte = outData & 0xFF;
-    uint8_t rxByte = 0;
-    spi_xfer_done = false;
+    volatile uint8_t txByte = outData & 0xFF;
+    volatile uint8_t rxByte = 0;
+    
+    #if LOCAL_USE_BLOCKING_SPIM != 1
+        spi_xfer_done = false;
+    #endif
+
     configASSERT(NRF_SUCCESS == nrf_drv_spi_transfer(&spi_instance,
                                                      &txByte, sizeof(txByte),
                                                      &rxByte, sizeof(rxByte)));
-    while (!spi_xfer_done) 
-    {
-        __WFE(); // Enter low-power state until event occurs
-    }
+
+    #if LOCAL_USE_BLOCKING_SPIM
+        // As no event handler was provided for spim_init, the xfer call is blocking
+    #else
+        while (!spi_xfer_done) 
+        {
+            __WFE(); // Enter low-power state until event occurs
+        }
+    #endif
 
     return rxByte;
 }

@@ -68,15 +68,17 @@ extern "C" {
  */
 #define STATIC_DEVICE_EUI                                  0
 
+
 /*!
  * end-device IEEE EUI (big endian)
  */
-#define LORAWAN_DEVICE_EUI                                 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+#define LORAWAN_DEVICE_EUI                                 { 0x00, 0x31, 0x7B, 0x1E, 0xEA, 0xD4, 0x76, 0x05 }
 
 /*!
  * App/Join server IEEE EUI (big endian)
  */
-#define LORAWAN_JOIN_EUI                                   { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+#define LORAWAN_JOIN_EUI                                   { 0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x02, 0xD1, 0xDF }
+
 
 /*!
  * Secure-element pin

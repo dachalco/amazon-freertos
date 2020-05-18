@@ -25,6 +25,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "board-config.h"
+#include "se-identity.h"
 
 void BoardCriticalSectionBegin( uint32_t *mask )
 {
@@ -41,12 +42,6 @@ void BoardCriticalSectionEnd( uint32_t *mask )
 // Strictly for demo purposes, just hardcode some ID to make rest of the stack happy
 void BoardGetUniqueId( uint8_t *id )
 {
-    id[7] = 0xCA;
-    id[6] = 0xFE;
-    id[5] = 0u;
-    id[4] = 0u;
-    id[3] = 0u;
-    id[2] = 0u;
-    id[1] = 0x00;
-    id[0] = 0xDC;
+    uint8_t eui[8] = LORAWAN_DEVICE_EUI;
+    memcpy(id, eui, 8);
 }

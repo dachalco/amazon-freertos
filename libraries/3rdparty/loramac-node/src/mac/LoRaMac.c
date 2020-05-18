@@ -30,6 +30,9 @@
  *
  * \author    Johannes Bruder ( STACKFORCE )
  */
+#include "FreeRTOS.h"
+#include "timers.h"
+
 #include "utilities.h"
 #include "region/Region.h"
 #include "LoRaMacClassB.h"
@@ -245,12 +248,17 @@ typedef struct sLoRaMacCtx
     /*
     * LoRaMac duty cycle delayed Tx timer
     */
-    TimerEvent_t TxDelayedTimer;
+
+    TimerHandle_t TxDelayedTimer;
+    //TimerEvent_t TxDelayedTimer;
+
     /*
     * LoRaMac reception windows timers
     */
-    TimerEvent_t RxWindowTimer1;
-    TimerEvent_t RxWindowTimer2;
+    TimerHandle_t RxWindowTimer1;
+    TimerHandle_t RxWindowTimer2;
+    //TimerEvent_t RxWindowTimer1;
+    //TimerEvent_t RxWindowTimer2;
     /*
     * LoRaMac reception windows delay
     * \remark normal frame: RxWindowXDelay = ReceiveDelayX - RADIO_WAKEUP_TIME
@@ -276,7 +284,8 @@ typedef struct sLoRaMacCtx
     /*
     * Acknowledge timeout timer. Used for packet retransmissions.
     */
-    TimerEvent_t AckTimeoutTimer;
+    TimerHandle_t AckTimeoutTimer;
+    //TimerEvent_t AckTimeoutTimer;
     /*
      * Uplink messages repetitions counter
      */
@@ -608,7 +617,8 @@ static void ResetMacParameters( void );
  * \param [IN] rxTimer  Window timer to be topped.
  * \param [IN] rxConfig Window parameters to be setup
  */
-static void RxWindowSetup( TimerEvent_t* rxTimer, RxConfigParams_t* rxConfig );
+static void RxWindowSetup( TimerHandle_t rxTimer, RxConfigParams_t* rxConfig );
+//static void RxWindowSetup( TimerEvent_t* rxTimer, RxConfigParams_t* rxConfig );
 
 /*!
  * \brief Opens up a continuous RX C window. This is used for
@@ -874,17 +884,28 @@ static void ProcessRadioTxDone( void )
         Radio.Sleep( );
     }
     // Setup timers
+    /*
     TimerSetValue( &MacCtx.RxWindowTimer1, MacCtx.RxWindow1Delay );
     TimerStart( &MacCtx.RxWindowTimer1 );
     TimerSetValue( &MacCtx.RxWindowTimer2, MacCtx.RxWindow2Delay );
     TimerStart( &MacCtx.RxWindowTimer2 );
+    */
+    FreeRTOS_TimerSetValue( MacCtx.RxWindowTimer1, MacCtx.RxWindow1Delay );
+    FreeRTOS_TimerStart( MacCtx.RxWindowTimer1 );
+    FreeRTOS_TimerSetValue( MacCtx.RxWindowTimer2, MacCtx.RxWindow2Delay );
+    FreeRTOS_TimerStart( MacCtx.RxWindowTimer2 );
+
 
     if( ( MacCtx.NvmCtx->DeviceClass == CLASS_C ) || ( MacCtx.NodeAckRequested == true ) )
     {
         getPhy.Attribute = PHY_ACK_TIMEOUT;
         phyParam = RegionGetPhyParam( MacCtx.NvmCtx->Region, &getPhy );
+        /*
         TimerSetValue( &MacCtx.AckTimeoutTimer, MacCtx.RxWindow2Delay + phyParam.Value );
         TimerStart( &MacCtx.AckTimeoutTimer );
+        */
+        FreeRTOS_TimerSetValue( MacCtx.AckTimeoutTimer, MacCtx.RxWindow2Delay + phyParam.Value );
+        FreeRTOS_TimerStart( MacCtx.AckTimeoutTimer );
     }
 
     // Update Aggregated last tx done time
@@ -965,7 +986,8 @@ static void ProcessRadioRxDone( void )
     MacCtx.McpsIndication.DeviceTimeAnsReceived = false;
 
     Radio.Sleep( );
-    TimerStop( &MacCtx.RxWindowTimer2 );
+    //TimerStop( &MacCtx.RxWindowTimer2 );
+    FreeRTOS_TimerStop( MacCtx.RxWindowTimer2 );
 
     // This function must be called even if we are not in class b mode yet.
     if( LoRaMacClassBRxBeacon( payload, size ) == true )
@@ -1393,7 +1415,8 @@ static void HandleRadioRxErrorTimeout( LoRaMacEventInfoStatus_t rx1EventInfoStat
 
             if( TimerGetElapsedTime( MacCtx.NvmCtx->LastTxDoneTime ) >= MacCtx.RxWindow2Delay )
             {
-                TimerStop( &MacCtx.RxWindowTimer2 );
+                //TimerStop( &MacCtx.RxWindowTimer2 );
+                FreeRTOS_TimerStop( MacCtx.RxWindowTimer2 );
                 MacCtx.MacFlags.Bits.MacDone = 1;
             }
         }
@@ -1600,7 +1623,8 @@ static void LoRaMacHandleMcpsRequest( void )
 
         if( stopRetransmission == true )
         {// Stop retransmission
-            TimerStop( &MacCtx.TxDelayedTimer );
+            //TimerStop( &MacCtx.TxDelayedTimer );
+            FreeRTOS_TimerStop( MacCtx.TxDelayedTimer );
             MacCtx.MacState &= ~LORAMAC_TX_DELAYED;
             StopRetransmission( );
         }
@@ -1698,7 +1722,8 @@ void LoRaMacProcess( void )
 
 static void OnTxDelayedTimerEvent( void* context )
 {
-    TimerStop( &MacCtx.TxDelayedTimer );
+    //TimerStop( &MacCtx.TxDelayedTimer );
+    FreeRTOS_TimerStop( MacCtx.TxDelayedTimer );
     MacCtx.MacState &= ~LORAMAC_TX_DELAYED;
 
     // Schedule frame, allow delayed frame transmissions
@@ -1752,7 +1777,8 @@ static void OnRxWindow2TimerEvent( void* context )
 
 static void OnAckTimeoutTimerEvent( void* context )
 {
-    TimerStop( &MacCtx.AckTimeoutTimer );
+    //TimerStop( &MacCtx.AckTimeoutTimer );
+    FreeRTOS_TimerStop( MacCtx.AckTimeoutTimer );
 
     if( MacCtx.NodeAckRequested == true )
     {
@@ -2533,8 +2559,12 @@ static LoRaMacStatus_t ScheduleTx( bool allowDelayedTx )
             if( MacCtx.DutyCycleWaitTime != 0 )
             {// Send later - prepare timer
                 MacCtx.MacState |= LORAMAC_TX_DELAYED;
+                /*
                 TimerSetValue( &MacCtx.TxDelayedTimer, MacCtx.DutyCycleWaitTime );
                 TimerStart( &MacCtx.TxDelayedTimer );
+                */
+                FreeRTOS_TimerSetValue( MacCtx.TxDelayedTimer, MacCtx.DutyCycleWaitTime );
+                FreeRTOS_TimerStart( MacCtx.TxDelayedTimer );
             }
             return LORAMAC_STATUS_OK;
         }
@@ -2690,9 +2720,11 @@ static void ResetMacParameters( void )
  * \param [IN] rxTimer  Window timer to be topped.
  * \param [IN] rxConfig Window parameters to be setup
  */
-static void RxWindowSetup( TimerEvent_t* rxTimer, RxConfigParams_t* rxConfig )
+//static void RxWindowSetup( TimerEvent_t* rxTimer, RxConfigParams_t* rxConfig )
+static void RxWindowSetup( TimerHandle_t rxTimer, RxConfigParams_t* rxConfig )
 {
-    TimerStop( rxTimer );
+    //TimerStop( &rxTimer );
+    FreeRTOS_TimerStop( rxTimer );
 
     // Ensure the radio is Idle
     Radio.Standby( );
@@ -3344,10 +3376,41 @@ LoRaMacStatus_t LoRaMacInitialization( LoRaMacPrimitives_t* primitives, LoRaMacC
     MacCtx.NvmCtx->AggregatedTimeOff = 0;
 
     // Initialize timers
+
+    /*
     TimerInit( &MacCtx.TxDelayedTimer, OnTxDelayedTimerEvent );
     TimerInit( &MacCtx.RxWindowTimer1, OnRxWindow1TimerEvent );
     TimerInit( &MacCtx.RxWindowTimer2, OnRxWindow2TimerEvent );
     TimerInit( &MacCtx.AckTimeoutTimer, OnAckTimeoutTimerEvent );
+    */
+    
+    // Use FreeRTOS alternatives
+    // Notee, none of these callbacks use their "context" argument
+    MacCtx.TxDelayedTimer = xTimerCreate("TxDelay",
+                                          1,           // Timer period. Just for initilization. Updated later in stack, before timer starts
+                                          pdFALSE,     // One-shot
+                                          (void * ) 0, // Initialize number of times timer has expired (metadata)
+                                          OnTxDelayedTimerEvent);  // This takes a timer context arg which may need updating elsewhere
+
+    MacCtx.RxWindowTimer1 = xTimerCreate("RxW1",
+                                          1,           
+                                          pdFALSE,     
+                                          (void * ) 0, 
+                                          OnRxWindow1TimerEvent);
+    MacCtx.RxWindowTimer2 = xTimerCreate("RxW2",
+                                          1,           
+                                          pdFALSE,     
+                                          (void * ) 0, 
+                                          OnRxWindow2TimerEvent);
+    MacCtx.AckTimeoutTimer = xTimerCreate("AckTO",
+                                          1,           
+                                          pdFALSE,     
+                                          (void * ) 0, 
+                                          OnAckTimeoutTimerEvent);
+    configASSERT( MacCtx.TxDelayedTimer != NULL );
+    configASSERT( MacCtx.RxWindowTimer1 != NULL );
+    configASSERT( MacCtx.RxWindowTimer2 != NULL );
+    configASSERT( MacCtx.AckTimeoutTimer != NULL );
 
     // Store the current initialization time
     MacCtx.NvmCtx->InitializationTime = SysTimeGetMcuTime( );
@@ -4814,10 +4877,17 @@ LoRaMacStatus_t LoRaMacDeInitialization( void )
     if ( LoRaMacStop( ) == LORAMAC_STATUS_OK )
     {
         // Stop Timers
+        /*
         TimerStop( &MacCtx.TxDelayedTimer );
         TimerStop( &MacCtx.RxWindowTimer1 );
         TimerStop( &MacCtx.RxWindowTimer2 );
         TimerStop( &MacCtx.AckTimeoutTimer );
+        */
+
+        FreeRTOS_TimerStop( MacCtx.TxDelayedTimer );
+        FreeRTOS_TimerStop( MacCtx.RxWindowTimer1 );
+        FreeRTOS_TimerStop( MacCtx.RxWindowTimer2 );
+        FreeRTOS_TimerStop( MacCtx.AckTimeoutTimer );
 
         // Take care about class B
         LoRaMacClassBHaltBeaconing( );

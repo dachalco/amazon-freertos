@@ -486,26 +486,6 @@ SX126x_t SX126x;
 TimerHandle_t TxTimeoutTimer = NULL;
 TimerHandle_t RxTimeoutTimer = NULL;
 
-static void 
-FreeRTOS_TimerSetValue(TimerHandle_t xTimer, uint32_t milliseconds)
-{
-   // No reason to block upon call, hence 0 block time. Enforce success because failure cases not handled here
-    configASSERT(pdPASS == xTimerChangePeriod(xTimer, milliseconds / portTICK_PERIOD_MS, 0));
-}
-static void 
-FreeRTOS_TimerStart(TimerHandle_t xTimer)
-{
-    // No reason to block upon call, hence 0 block time. Enforce success because failure cases not handled here
-    configASSERT(pdPASS == xTimerStart(xTimer, 0));
-}
-
-static void 
-FreeRTOS_TimerStop(TimerHandle_t xTimer)
-{
-    configASSERT(pdPASS == xTimerStop(xTimer, 0));
-}
-
-
 //TimerEvent_t TxTimeoutTimer;
 //TimerEvent_t RxTimeoutTimer;
 
@@ -539,6 +519,7 @@ void RadioInit( RadioEvents_t *events )
 {
     RadioEvents = events;
 
+    //
     SX126xInit( RadioOnDioIrq );
     SX126xSetStandby( STDBY_RC );
     SX126xSetRegulatorMode( USE_DCDC );

@@ -28,6 +28,10 @@ extern "C"
 {
 #endif
 
+
+#include "FreeRTOS.h"
+#include "timers.h"
+
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -149,6 +153,18 @@ TimerTime_t TimerTempCompensation( TimerTime_t period, float temperature );
  * \brief Processes pending timer events
  */
 void TimerProcess( void );
+
+
+
+
+
+
+
+// FreeRTOS API alternatives
+void FreeRTOS_TimerSetValue(TimerHandle_t xTimer, uint32_t milliseconds);
+void FreeRTOS_TimerStart(TimerHandle_t xTimer);
+void FreeRTOS_TimerStop(TimerHandle_t xTimer);
+
 
 #ifdef __cplusplus
 }

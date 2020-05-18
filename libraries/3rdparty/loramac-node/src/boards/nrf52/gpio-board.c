@@ -84,6 +84,7 @@ void GpioMcuInit( Gpio_t *obj, uint16_t pinIndex, PinModes mode, PinConfigs conf
         nrf_gpio_cfg_output(pinIndex); 
         GpioMcuWrite( obj, value );
     } 
+    #ifdef USE_ANALOGIC
     else if( mode == PIN_ANALOGIC )
     {
         /* The reset on the chip is active low. Higher level APIs pull it down, but there after we must escape the reset state by holding
@@ -98,6 +99,7 @@ void GpioMcuInit( Gpio_t *obj, uint16_t pinIndex, PinModes mode, PinConfigs conf
             configASSERT(0);
         }
     }
+    #endif
     else
     {
         configASSERT(0);

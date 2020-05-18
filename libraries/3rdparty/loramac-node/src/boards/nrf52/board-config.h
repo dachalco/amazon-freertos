@@ -54,7 +54,7 @@ extern "C"
 #define RADIO_MISO                                  NRF_GPIO_PIN_MAP(1, 14) // In : SPI Slave output
 #define RADIO_SCLK                                  NRF_GPIO_PIN_MAP(1, 15) // Out: SPI Slave clock
 #define RADIO_NSS                                   NRF_GPIO_PIN_MAP(1, 8)  // Out: SPI Slave select
-#define RADIO_BUSY                                  NRF_GPIO_PIN_MAP(1, 3)  // In :
+#define RADIO_BUSY                                  NRF_GPIO_PIN_MAP(1, 4)  // In :
 #define RADIO_DIO_1                                 NRF_GPIO_PIN_MAP(1, 6)  // In : Setup to be the IRQ line. Needs GPIOTE
 
 /* Probe pins for different stages of chip setup. See PCB Circuit. Read ONLY */

@@ -87,6 +87,7 @@ static bool TimerExists( TimerEvent_t *obj );
 
 void TimerInit( TimerEvent_t *obj, void ( *callback )( void *context ) )
 {
+    configASSERT(0); // Use FreeRTOS timer API!
     obj->Timestamp = 0;
     obj->ReloadValue = 0;
     obj->IsStarted = false;
@@ -247,6 +248,8 @@ void TimerIrqHandler( void )
 
 void TimerStop( TimerEvent_t *obj )
 {
+    configASSERT(0);
+
     CRITICAL_SECTION_BEGIN( );
 
     TimerEvent_t* prev = TimerListHead;
@@ -403,3 +406,24 @@ void TimerProcess( void )
     RtcProcess( );
 }
 #endif
+
+
+
+void 
+FreeRTOS_TimerSetValue(TimerHandle_t xTimer, uint32_t milliseconds)
+{
+   // No reason to block upon call, hence 0 block time. Enforce success because failure cases not handled here
+    configASSERT(pdPASS == xTimerChangePeriod(xTimer, milliseconds / portTICK_PERIOD_MS, 0));
+}
+void 
+FreeRTOS_TimerStart(TimerHandle_t xTimer)
+{
+    // No reason to block upon call, hence 0 block time. Enforce success because failure cases not handled here
+    configASSERT(pdPASS == xTimerStart(xTimer, 0));
+}
+
+void 
+FreeRTOS_TimerStop(TimerHandle_t xTimer)
+{
+    configASSERT(pdPASS == xTimerStop(xTimer, 0));
+}
