@@ -309,7 +309,7 @@ static void prvClockInit( void )
 /*-----------------------------------------------------------*/
 
 /**@brief Function for the Timer initialization.
- *
+ *f
  * @details Initializes the timer module. This creates and starts application timers.
  */
 static void prvTimersInit( void )
@@ -351,7 +351,7 @@ int main( void )
                             mainLOGGING_MESSAGE_QUEUE_LENGTH );
 
 
-    //nrf_sdh_freertos_init( NULL, NULL ); Don't care about their bluetooth soft device for now
+    //nrf_sdh_freertos_init( NULL, NULL );// Don't care about their bluetooth soft device for now
     //ret_code_t xErrCode = pm_init();
     vTaskStartScheduler();
 

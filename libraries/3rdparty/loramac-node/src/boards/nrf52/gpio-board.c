@@ -48,8 +48,7 @@ void CheckNrfPin(uint32_t pin)
            pin == RADIO_ANT_SWITCH_POWER ||
            pin == RADIO_FREQ_SEL ||
            pin == RADIO_XTAL_SEL || 
-           pin == RADIO_DEVICE_SEL ||
-           pin == LED_1);
+           pin == RADIO_DEVICE_SEL);
 }
       
 

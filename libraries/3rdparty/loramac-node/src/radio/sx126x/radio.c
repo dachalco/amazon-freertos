@@ -33,6 +33,15 @@
 #include "sx126x-board.h"
 #include "board.h"
 
+#include "nrf_gpio.h"
+#include "board-config.h"
+
+
+static uint32_t preambles_detected = 0;
+static uint32_t header_valid = 0;
+static uint32_t sync_valid = 0;
+static uint32_t crc_errors = 0;
+
 /*!
  * \brief Initializes the radio
  *
@@ -1096,6 +1105,8 @@ void RadioRx( uint32_t timeout )
     {
         FreeRTOS_TimerSetValue( RxTimeoutTimer, timeout );
         FreeRTOS_TimerStart( RxTimeoutTimer );
+        nrf_gpio_pin_clear(LED_RX_TOGGLE);// RX LED will be on during the RX Window
+
         /*
         TimerSetValue( &RxTimeoutTimer, timeout );
         TimerStart( &RxTimeoutTimer );
@@ -1108,7 +1119,7 @@ void RadioRx( uint32_t timeout )
     }
     else
     {
-        SX126xSetRx( RxTimeout << 6 );
+        SX126xSetRx( RxTimeout << 6 ); 
     }
 }
 
@@ -1298,6 +1309,7 @@ void RadioIrqProcess( void )
                
                 FreeRTOS_TimerStop( RxTimeoutTimer );
                 //TimerStop( &RxTimeoutTimer );
+
                 if( RxContinuous == false )
                 {
                     //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
@@ -1346,6 +1358,8 @@ void RadioIrqProcess( void )
             {
                 FreeRTOS_TimerStop( RxTimeoutTimer );
                 //TimerStop( &RxTimeoutTimer );
+                nrf_gpio_pin_set(LED_RX_TOGGLE);
+                printf("[DEBUG] RX Timeout @ %d\n", xTaskGetTickCount());
 
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
                 SX126xSetOperatingMode( MODE_STDBY_RC );
@@ -1358,19 +1372,26 @@ void RadioIrqProcess( void )
 
         if( ( irqRegs & IRQ_PREAMBLE_DETECTED ) == IRQ_PREAMBLE_DETECTED )
         {
+            preambles_detected++;
             //__NOP( );
         }
 
         if( ( irqRegs & IRQ_SYNCWORD_VALID ) == IRQ_SYNCWORD_VALID )
         {
+            sync_valid++;
             //__NOP( );
         }
 
         if( ( irqRegs & IRQ_HEADER_VALID ) == IRQ_HEADER_VALID )
         {
+            header_valid++;
             //__NOP( );
-        }
+        } 
 
+        if ( ( irqRegs & IRQ_CRC_ERROR ) == IRQ_CRC_ERROR )
+        {
+            crc_errors++;
+        }
         if( ( irqRegs & IRQ_HEADER_ERROR ) == IRQ_HEADER_ERROR )
         {
             FreeRTOS_TimerStop( RxTimeoutTimer );

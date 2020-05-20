@@ -1046,6 +1046,15 @@ void lora_test_entry()
     // Radio's DIO1 will route irq line through gpio, hence gpiote
     configASSERT(NRF_SUCCESS == nrf_drv_gpiote_init());
 
+    // LEDs used to help debug RX/TX windows
+    nrf_gpio_cfg_output(LED_APP_TOGGLE); 
+    nrf_gpio_cfg_output(LED_TX_TOGGLE); 
+    nrf_gpio_cfg_output(LED_RX_TOGGLE);
+    nrf_gpio_pin_set(LED_APP_TOGGLE);
+    nrf_gpio_pin_set(LED_TX_TOGGLE);
+    nrf_gpio_pin_set(LED_RX_TOGGLE);
+
+
     printf("Initializing...");
     SpiInit(&SX126x.Spi, SPI_1, RADIO_MOSI, RADIO_MISO, RADIO_SCLK, NC );
     SX126xIoInit();
@@ -1094,14 +1103,16 @@ void lora_test_entry()
     LoRaMacMibSetRequestConfirm( &mibReq );
 
     // Set the APP_KEY
-    mibReq.Type = MIB_APP_KEY;
+    //mibReq.Type = MIB_APP_KEY;
     //uint8_t app_key[] = { 0xBD, 0x6D, 0x98, 0x17, 0x99, 0x1C, 0xA2, 0x6F, 0xE3, 0xE9, 0x7A, 0x4D, 0x91, 0x3A, 0x82, 0xF2 };
-    uint8_t app_key[] = { 0x55, 0x0C, 0x24, 0x1E, 0x52, 0x87, 0xF4, 0xEC, 0xF8, 0x93, 0xC5, 0x85, 0x8B, 0x7B, 0xE6, 0x72 };
-    mibReq.Param.AppKey = app_key;
+    //uint8_t app_key[] = { 0x55, 0x0C, 0x24, 0x1E, 0x52, 0x87, 0xF4, 0xEC, 0xF8, 0x93, 0xC5, 0x85, 0x8B, 0x7B, 0xE6, 0x72 };
+    //mibReq.Param.AppKey = app_key;
     LoRaMacMibSetRequestConfirm( &mibReq );
 
     // Set NWK_KEY. For some reason this stack is using it to calculate MIC for join-request. Strictly for join request, MIC should use App-Key
     mibReq.Type = MIB_NWK_KEY;
+    uint8_t app_key[] = { 0x55, 0x0C, 0x24, 0x1E, 0x52, 0x87, 0xF4, 0xEC, 0xF8, 0x93, 0xC5, 0x85, 0x8B, 0x7B, 0xE6, 0x72 };
+    mibReq.Param.AppKey = app_key;
    LoRaMacMibSetRequestConfirm( &mibReq ); // Reuse app key
 
 
@@ -1294,11 +1305,14 @@ void lora_test_entry()
           }
           case DEVICE_STATE_SLEEP:
           {
-              CRITICAL_SECTION_BEGIN( );
+
+
               if( IsMacProcessPending == 1 )
               {
+                  CRITICAL_SECTION_BEGIN( );
                   // Clear flag and prevent MCU to go into low power modes.
                   IsMacProcessPending = 0;
+                  CRITICAL_SECTION_END( );
               }
               else
               {
@@ -1307,7 +1321,7 @@ void lora_test_entry()
                   // The MCU wakes up through events
                   //BoardLowPowerHandler( );
               }
-              CRITICAL_SECTION_END( );
+
               break;
           }
           default:
@@ -1318,8 +1332,9 @@ void lora_test_entry()
       }
 
         // Status aesthetics
-        nrf_gpio_pin_toggle(SX1262_PIN_LED);
+        //nrf_gpio_pin_toggle(SX1262_PIN_LED);
         //vTaskDelay(xSleepTick);
+        nrf_gpio_pin_toggle(LED_APP_TOGGLE);
     }
 
     vTaskDelete(NULL);

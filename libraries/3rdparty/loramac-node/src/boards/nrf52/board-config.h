@@ -64,9 +64,9 @@ extern "C"
 #define RADIO_DEVICE_SEL                            NRF_GPIO_PIN_MAP(0, 28)  // In
 
 /* Does not influence radio chip */
-#define LED_1                                       NRF_GPIO_PIN_MAP(0, 14)  // Out: nrf52 onboard LED2. Used for status/sanity check. Does not affect chip
-
-
+#define LED_APP_TOGGLE                              NRF_GPIO_PIN_MAP(0, 13)  // Out: nrf52 onboard LED2. Used for status/sanity check. Does not affect chip
+#define LED_TX_TOGGLE                               NRF_GPIO_PIN_MAP(0, 14)
+#define LED_RX_TOGGLE                               NRF_GPIO_PIN_MAP(0, 16)
 // None of these should be needed for minimal nrf52 demo port
 /*
 // Debug pins definition.

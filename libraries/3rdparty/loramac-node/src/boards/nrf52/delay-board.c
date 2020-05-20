@@ -3,6 +3,12 @@
 
 void DelayMsMcu( uint32_t ms )
 {
-    const TickType_t xDelay = pdMS_TO_TICKS(ms);
+    TickType_t xDelay = pdMS_TO_TICKS(ms);
+    
+    if (xDelay == 0)
+    {
+        xDelay++;
+    }
+
     vTaskDelay(xDelay);
 }

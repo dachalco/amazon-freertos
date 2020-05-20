@@ -90,7 +90,7 @@
  */
 typedef struct
 {
-    uint32_t        Seconds;    // Seconds elapsed since start of RTC
+    uint32_t        start_tick;    // Can store a relative ref for t_start
 
 }RtcTimerContext_t;
 
@@ -127,7 +127,7 @@ static RTC_AlarmTypeDef RtcAlarm;
  * Set with the \ref RtcSetTimerContext function
  * Value is kept as a Reference to calculate alarm
  */
-static RtcTimerContext_t RtcTimerContext;
+static RtcTimerContext_t RtcTimerContext = { 0 };
 
 #if 0 
 
@@ -153,6 +153,8 @@ void FreeRTOS_RTC_Callback()
 void RtcInit( void )
 {
 
+// Going to use tick count instead
+#ifdef USE_SECOND_RESOLUTION
     // Install FreeRTOS timer callback for updating RtcContext
     RtcHandle = xTimerCreate("RTC",
                              1000 / portTICK_PERIOD_MS,
@@ -164,7 +166,7 @@ void RtcInit( void )
     // Start tracing immediately upon init
     configASSERT(pdPASS == xTimerStart(RtcHandle, 0));
 
-
+#endif
 /*
     RTC_DateTypeDef date;
     RTC_TimeTypeDef time;
@@ -221,6 +223,7 @@ void RtcInit( void )
  */
 uint32_t RtcSetTimerContext( void )
 {
+#ifdef USE_SECOND_RESOLUTION
     // Demo won't be running long enough to require days. No need for now
     taskENTER_CRITICAL();
     RtcTimerContext.Seconds = 0;
@@ -228,11 +231,15 @@ uint32_t RtcSetTimerContext( void )
 
     return RtcTimerContext.Seconds;
 
+#else
+    configASSERT(0); // TODO: Need to store what tick this func is called
+   
+    return 0;
+#endif
     /*
     RtcTimerContext.Time = ( uint32_t )RtcGetCalendarValue( &RtcTimerContext.CalendarDate, &RtcTimerContext.CalendarTime );
     return ( uint32_t )RtcTimerContext.Time;
     */
-
 }
 
 #if 0
@@ -257,6 +264,7 @@ uint32_t RtcGetTimerContext( void )
  */
 uint32_t RtcGetMinimumTimeout( void )
 {
+    configASSERT(0); // What time unit is the stack's ticks, NOT FreeRTOS ticks. Same name different objects
     return( MIN_ALARM_DELAY );
 }
 
@@ -276,7 +284,7 @@ uint32_t RtcMs2Tick( uint32_t milliseconds )
 }
 
 /*!
- * \brief converts time in ticks to time in ms
+ * \brief converts time in ticks to time in ms. WIll be using FreeRTOS ticks here
  *
  * \param[IN] time in timer ticks
  * \retval returns time in milliseconds
@@ -449,7 +457,7 @@ void RtcStartAlarm( uint32_t timeout )
     }
 
     /* Set RTC_AlarmStructure with calculated values*/
-    RtcAlarm.AlarmTime.SubSeconds     = PREDIV_S - rtcAlarmSubSeconds;
+    RtcAlarm.AlarmTime.:/     = PREDIV_S - rtcAlarmSubSeconds;
     RtcAlarm.AlarmSubSecondMask       = ALARM_SUBSECOND_MASK; 
     RtcAlarm.AlarmTime.Seconds        = rtcAlarmSeconds;
     RtcAlarm.AlarmTime.Minutes        = rtcAlarmMinutes;
@@ -468,10 +476,12 @@ void RtcStartAlarm( uint32_t timeout )
 
 #endif
 
+/*
+* This is supposed to return 'ticks' as used by this lorawan stack
+*/
 uint32_t RtcGetTimerValue( void )
 {
-    return SecondsElapsed;
-
+    return (uint32_t) xTaskGetTickCount();
 /*
     RTC_TimeTypeDef time;
     RTC_DateTypeDef date;
@@ -482,13 +492,12 @@ uint32_t RtcGetTimerValue( void )
     */
 }
 
-
 uint32_t RtcGetTimerElapsedTime( void )
 {
-  return( ( uint32_t )( SecondsElapsed - RtcTimerContext.Seconds ) );
+    configASSERT(0); // There's currently no code that needs this
+  //return( ( uint32_t )( SecondsElapsed - RtcTimerContext.Seconds ) );
 }
 #if 0
-
 void RtcSetMcuWakeUpTime( void )
 {
     RTC_TimeTypeDef time;
@@ -563,8 +572,12 @@ static uint64_t RtcGetCalendarValue( RTC_DateTypeDef* date, RTC_TimeTypeDef* tim
 
 uint32_t RtcGetCalendarTime( uint16_t *milliseconds )
 {
-    *milliseconds = 0;
-    return SecondsElapsed;
+    uint32_t current_tick = (uint32_t) xTaskGetTickCount();
+    uint32_t total_ms     = portTICK_PERIOD_MS * current_tick;
+    uint32_t seconds      = total_ms / 1000;
+    *milliseconds         = total_ms % 1000;
+
+    return seconds;
 
     /*    
     RTC_TimeTypeDef time ;
