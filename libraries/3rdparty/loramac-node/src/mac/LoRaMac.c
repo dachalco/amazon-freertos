@@ -49,12 +49,11 @@
 #include "LoRaMacSerializer.h"
 
 #include "LoRaMac.h"
-
 #include "nrf_gpio.h"
 #include "board-config.h"
-
-
 #include "sx126x.h"
+#include "lora-debug.h"
+
 
 #ifndef LORAMAC_VERSION
 /*!
@@ -820,7 +819,8 @@ static void OnRadioTxDone( void )
         MacCtx.MacCallbacks->MacProcessNotify( );
     }
 
-    printf("[DEBUG] Tx Done @ %d\n", xTaskGetTickCount());
+    //printf("[DEBUG] Tx Done @ %d, RTC:0d%d\n", xTaskGetTickCount(), GetDebugTime());
+    GetDebugTime(TX_DONE);
 }
 
 static void OnRadioRxDone( uint8_t *payload, uint16_t size, int16_t rssi, int8_t snr )
@@ -902,7 +902,8 @@ static void ProcessRadioTxDone( void )
     FreeRTOS_TimerStart( MacCtx.RxWindowTimer1 );
     FreeRTOS_TimerSetValue( MacCtx.RxWindowTimer2, MacCtx.RxWindow2Delay );
     FreeRTOS_TimerStart( MacCtx.RxWindowTimer2 );
-    printf("[DEBUG] RX Delays @ %d\n", xTaskGetTickCount());
+    //printf("[DEBUG] RX Delays @ %d\n", xTaskGetTickCount());
+    GetDebugTime(RX_WINDOW_DELAY_START);
 
 
     if( ( MacCtx.NvmCtx->DeviceClass == CLASS_C ) || ( MacCtx.NodeAckRequested == true ) )
@@ -1428,6 +1429,7 @@ static void HandleRadioRxErrorTimeout( LoRaMacEventInfoStatus_t rx1EventInfoStat
                 FreeRTOS_TimerStop( MacCtx.RxWindowTimer2 );
                 MacCtx.MacFlags.Bits.MacDone = 1;
             }
+            GetDebugTime(RX1_TIMEOUT);
         }
         else
         {
@@ -1441,6 +1443,7 @@ static void HandleRadioRxErrorTimeout( LoRaMacEventInfoStatus_t rx1EventInfoStat
             {
                 MacCtx.MacFlags.Bits.MacDone = 1;
             }
+            GetDebugTime(RX2_TIMEOUT);
         }
     }
     
@@ -1718,7 +1721,7 @@ void LoRaMacProcess( void )
             LoRaMacHandleMlmeRequest( );
             LoRaMacHandleMcpsRequest( );
         }
-        printf("[DEBUG] Service Request @ %d\n", xTaskGetTickCount());
+
         LoRaMacHandleRequestEvents( );
         LoRaMacHandleScheduleUplinkEvent( );
         LoRaMacEnableRequests( LORAMAC_REQUEST_HANDLING_ON );
@@ -1765,7 +1768,8 @@ static void OnRxWindow1TimerEvent( void* context )
     MacCtx.RxWindow1Config.RxContinuous = false;
     MacCtx.RxWindow1Config.RxSlot = RX_SLOT_WIN_1;
 
-    printf("[DEBUG] RX1 @ %d\n", xTaskGetTickCount());
+    //printf("[DEBUG] RX1 @ %d\n", xTaskGetTickCount());
+    GetDebugTime(RX1_START);
     RxWindowSetup( MacCtx.RxWindowTimer1, &MacCtx.RxWindow1Config );
 }
 
@@ -1783,7 +1787,8 @@ static void OnRxWindow2TimerEvent( void* context )
     MacCtx.RxWindow2Config.RxContinuous = false;
     MacCtx.RxWindow2Config.RxSlot = RX_SLOT_WIN_2;
 
-    printf("[DEBUG] RX2 @ %d\n", xTaskGetTickCount());
+    //printf("[DEBUG] RX2 @ %d\n", xTaskGetTickCount());
+    GetDebugTime(RX2_START);
     RxWindowSetup( MacCtx.RxWindowTimer2, &MacCtx.RxWindow2Config );
 }
 
@@ -2417,7 +2422,8 @@ LoRaMacStatus_t SendReJoinReq( JoinReqIdentifier_t joinReqType )
     }
 
     // Schedule frame
-    printf("[DEBUG] Scheduled TX @ %d\n", xTaskGetTickCount());
+    //printf("[DEBUG] Scheduled TX @ %d, RTC:0d%d\n", xTaskGetTickCount(), GetDebugTime());
+    GetDebugTime(TX_SCHEDULED);
     status = ScheduleTx( allowDelayedTx );
     return status;
 }
@@ -2598,7 +2604,9 @@ static LoRaMacStatus_t ScheduleTx( bool allowDelayedTx )
     }
 
     // Try to send now
-    printf("[DEBUG] TX @ %d\n", xTaskGetTickCount());
+    //printf("[DEBUG] TX @ %d\n", xTaskGetTickCount());
+    GetDebugTime(TX_START);
+
     return SendFrameOnChannel( MacCtx.Channel );
 }
 
@@ -2935,7 +2943,9 @@ LoRaMacStatus_t SendFrameOnChannel( uint8_t channel )
     }
 
     // Send now
-    printf("[DEBUG] RadioSend @ %d\n", xTaskGetTickCount());
+    //printf("[DEBUG] RadioSend @ %d\n", xTaskGetTickCount());
+    GetDebugTime(RADIO_SEND);
+
     Radio.Send( MacCtx.PktBuffer, MacCtx.PktBufferLen );
 
     return LORAMAC_STATUS_OK;

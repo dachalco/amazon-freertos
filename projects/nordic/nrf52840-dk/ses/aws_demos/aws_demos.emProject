@@ -726,6 +726,10 @@
         </folder>
         <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/mcu/utilities.c" />
       </folder>
+      <folder Name="debug">
+        <file file_name="lora-debug.c" />
+        <file file_name="lora-debug.h" />
+      </folder>
     </folder>
   </project>
   <configuration

@@ -54,6 +54,8 @@
 #include "sx126x-board.h"
 #include "LoRaMac.h"
 #include "Commissioning.h"
+#include "lora-debug.h"
+
 
 #define ACTIVE_REGION LORAMAC_REGION_US915
 
@@ -1053,8 +1055,12 @@ void lora_test_entry()
     nrf_gpio_pin_set(LED_APP_TOGGLE);
     nrf_gpio_pin_set(LED_TX_TOGGLE);
     nrf_gpio_pin_set(LED_RX_TOGGLE);
+    
+    StartDebugTimer();
+    //printf("[DEBUG] App Start @ RTC:0d%d\n", GetDebugTime());
+    GetDebugTime(APP_START);
 
-
+    // Here on is to mirror their classA application code
     printf("Initializing...");
     SpiInit(&SX126x.Spi, SPI_1, RADIO_MOSI, RADIO_MISO, RADIO_SCLK, NC );
     SX126xIoInit();
@@ -1113,7 +1119,7 @@ void lora_test_entry()
     mibReq.Type = MIB_NWK_KEY;
     uint8_t app_key[] = { 0x55, 0x0C, 0x24, 0x1E, 0x52, 0x87, 0xF4, 0xEC, 0xF8, 0x93, 0xC5, 0x85, 0x8B, 0x7B, 0xE6, 0x72 };
     mibReq.Param.AppKey = app_key;
-   LoRaMacMibSetRequestConfirm( &mibReq ); // Reuse app key
+    LoRaMacMibSetRequestConfirm( &mibReq ); // Reuse app key
 
 
     // Start the routine. Report on status

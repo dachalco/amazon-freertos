@@ -35,7 +35,7 @@
 
 #include "nrf_gpio.h"
 #include "board-config.h"
-
+#include "lora-debug.h"
 
 static uint32_t preambles_detected = 0;
 static uint32_t header_valid = 0;
@@ -1262,6 +1262,10 @@ void RadioOnRxTimeoutIrq( void* context )
 
 void RadioOnDioIrq( void* context )
 {
+    if (SX126xGetOperatingMode() == MODE_TX) {
+        GetDebugTime(TX_DONE_IRQ);
+    }
+
     IrqFired = true;
 }
 
@@ -1269,7 +1273,7 @@ void RadioIrqProcess( void )
 {
     if( IrqFired == true )
     {
-        CRITICAL_SECTION_BEGIN( );
+        CRITICAL_SECTION_BEGIN( ); 
         // Clear IRQ flag
         IrqFired = false;
         CRITICAL_SECTION_END( );
@@ -1359,7 +1363,7 @@ void RadioIrqProcess( void )
                 FreeRTOS_TimerStop( RxTimeoutTimer );
                 //TimerStop( &RxTimeoutTimer );
                 nrf_gpio_pin_set(LED_RX_TOGGLE);
-                printf("[DEBUG] RX Timeout @ %d\n", xTaskGetTickCount());
+                //printf("[DEBUG] RX Timeout @ %d\n", xTaskGetTickCount());
 
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
                 SX126xSetOperatingMode( MODE_STDBY_RC );
