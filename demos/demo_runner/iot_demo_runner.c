@@ -1038,7 +1038,30 @@ void OnMacProcessNotify( void )
     IsMacProcessPending = 1;
 }
 
+// Get US-915 channel mask
+void PrintChannelMask()
+{
+    MibRequestConfirm_t req;
+    req.Type = MIB_CHANNELS_MASK;
+    configASSERT(LoRaMacMibGetRequestConfirm( &req ) == LORAMAC_STATUS_OK );
 
+    #if (ACTIVE_REGION == LORAMAC_REGION_US915)
+        printf("Channel Mask: ");
+        for (int i=0; i<5; i++) {
+            printf("%04x ", req.Param.ChannelsMask[i]);
+        }
+        printf("\n");
+    #endif
+}
+
+void ConfigureTTNChannels()
+{
+    MibRequestConfirm_t req;
+    req.Type = MIB_CHANNELS_MASK;
+    uint16_t mask[] = {0x00ff, 0x0000, 0x0000, 0xffff, 0x00ff};
+    req.Param.ChannelsMask = mask;
+    configASSERT(LoRaMacMibSetRequestConfirm( &req ) == LORAMAC_STATUS_OK);
+}
 
 
 static TaskHandle_t mTask_lora = NULL;
@@ -1097,8 +1120,8 @@ void lora_test_entry()
     // Set Dev EUI
     mibReq.Type = MIB_DEV_EUI;
     //uint8_t dev_eui[] = { 0x00, 0x31, 0x7B, 0x1E, 0xEA, 0xD4, 0x76, 0x05 };
-    //uint8_t dev_eui[] = { 0x00, 0x99, 0x4B, 0x20, 0x69, 0x73, 0x06, 0xD1 }; // For TTN
-    int8_t dev_eui[] = { 0x03, 0x32, 0x58, 0x79, 0xdd, 0xef, 0xb7, 0x43}; // For Chirpstack
+    uint8_t dev_eui[] = { 0x00, 0x99, 0x4B, 0x20, 0x69, 0x73, 0x06, 0xD1 }; // For TTN
+    //int8_t dev_eui[] = { 0x03, 0x32, 0x58, 0x79, 0xdd, 0xef, 0xb7, 0x43}; // For Chirpstack
 
     mibReq.Param.DevEui = dev_eui;
     LoRaMacMibSetRequestConfirm( &mibReq );
@@ -1106,8 +1129,8 @@ void lora_test_entry()
     // Set App EUI
     mibReq.Type = MIB_JOIN_EUI;
     //uint8_t app_eui[] = { 0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x02, 0xD1, 0xDF };
-    //uint8_t app_eui[] = { 0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x02, 0xF1, 0xAD }; // For  TTN
-    uint8_t app_eui[] = { 0,0,0,0,0,0,0,0}; // For chirpstack. Apparently 0 is sufficient here
+    uint8_t app_eui[] = { 0x70, 0xB3, 0xD5, 0x7E, 0xD0, 0x02, 0xF1, 0xAD }; // For  TTN
+    //uint8_t app_eui[] = { 0,0,0,0,0,0,0,0}; // For chirpstack. Apparently 0 is sufficient here
     mibReq.Param.JoinEui = app_eui;
     LoRaMacMibSetRequestConfirm( &mibReq );
 
@@ -1120,8 +1143,8 @@ void lora_test_entry()
 
     // Set NWK_KEY. For some reason this stack is using it to calculate MIC for join-request. Strictly for join request, MIC should use App-Key
     mibReq.Type = MIB_NWK_KEY;
-    //uint8_t app_key[] = { 0x55, 0x0C, 0x24, 0x1E, 0x52, 0x87, 0xF4, 0xEC, 0xF8, 0x93, 0xC5, 0x85, 0x8B, 0x7B, 0xE6, 0x72 }; // For TTN
-    uint8_t app_key[] = { 0xfe, 0xe4, 0x08, 0x83, 0xc6, 0x68, 0xf6, 0x17, 0xf3, 0xd3, 0x83, 0xf4, 0x55, 0x8d, 0x10, 0xf6 }; // For chirpstack
+    uint8_t app_key[] = { 0x55, 0x0C, 0x24, 0x1E, 0x52, 0x87, 0xF4, 0xEC, 0xF8, 0x93, 0xC5, 0x85, 0x8B, 0x7B, 0xE6, 0x72 }; // For TTN
+    //uint8_t app_key[] = { 0xfe, 0xe4, 0x08, 0x83, 0xc6, 0x68, 0xf6, 0x17, 0xf3, 0xd3, 0x83, 0xf4, 0x55, 0x8d, 0x10, 0xf6 }; // For chirpstack
     mibReq.Param.AppKey = app_key;
     LoRaMacMibSetRequestConfirm( &mibReq ); // Reuse app key
 
@@ -1133,6 +1156,9 @@ void lora_test_entry()
 
     DeviceState = DEVICE_STATE_RESTORE;
     printf( "###### ===== ClassA demo application v1.0.0 ==== ######\n\n" );
+    PrintChannelMask();
+    ConfigureTTNChannels();
+    PrintChannelMask();
     while(1)
     {
       // Process Radio IRQ

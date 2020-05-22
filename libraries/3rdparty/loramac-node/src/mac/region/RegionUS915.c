@@ -472,7 +472,7 @@ void RegionUS915InitDefaults( InitDefaultsParams_t* params )
         case INIT_TYPE_INIT:
         {
             // Initialize 8 bit channel groups index
-            NvmCtx.JoinChannelGroupsCurrentIndex = 0;
+            //NvmCtx.JoinChannelGroupsCurrentIndex = 0;
 
             // Initialize the join trials counter
             NvmCtx.JoinTrialsCounter = 0;
