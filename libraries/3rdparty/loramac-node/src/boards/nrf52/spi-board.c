@@ -60,7 +60,7 @@ void SpiInit( Spi_t *obj, SpiId_t spiId, PinNames mosi, PinNames miso, PinNames 
 
     // Configure/Init nrf spi instance
     nrfx_spi_config_t spi_config = NRFX_SPI_DEFAULT_CONFIG;
-    spi_config.frequency          = NRF_SPI_FREQ_1M; 
+    spi_config.frequency          = NRF_SPI_FREQ_8M; 
     spi_config.miso_pin           = RADIO_MISO;
     spi_config.mosi_pin           = RADIO_MOSI;
     spi_config.sck_pin            = RADIO_SCLK;
