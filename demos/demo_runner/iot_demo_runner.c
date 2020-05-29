@@ -47,6 +47,7 @@
 
 #include "nrf_gpio.h"
 #include "nrf_drv_gpiote.h"
+#include "nrf_nvmc.h"
 
 // From loramac-node stack
 #include "board-config.h"
@@ -54,7 +55,10 @@
 #include "sx126x-board.h"
 #include "LoRaMac.h"
 #include "Commissioning.h"
+#include "NvmCtxMgmt.h"
+
 #include "lora-debug.h"
+#include "eeprom-board.h"
 
 
 #define ACTIVE_REGION LORAMAC_REGION_US915
@@ -1088,6 +1092,7 @@ void lora_test_entry()
     SpiInit(&SX126x.Spi, SPI_1, RADIO_MOSI, RADIO_MISO, RADIO_SCLK, NC );
     SX126xIoInit();
     RtcInit();
+    EepromMcuInit();
 
     LoRaMacPrimitives_t macPrimitives;
     LoRaMacCallback_t macCallbacks;
@@ -1104,7 +1109,7 @@ void lora_test_entry()
     macPrimitives.MacMlmeIndication = MlmeIndication;
     macCallbacks.GetBatteryLevel = NULL;
     macCallbacks.GetTemperatureLevel = NULL;
-    macCallbacks.NvmContextChange = NULL;
+    macCallbacks.NvmContextChange = NvmCtxMgmtEvent;
     macCallbacks.MacProcessNotify = OnMacProcessNotify;
     status = LoRaMacInitialization( &macPrimitives, &macCallbacks, ACTIVE_REGION );
     if ( status != LORAMAC_STATUS_OK )
@@ -1159,6 +1164,7 @@ void lora_test_entry()
     PrintChannelMask();
     ConfigureTTNChannels();
     PrintChannelMask();
+
     while(1)
     {
       // Process Radio IRQ
@@ -1173,40 +1179,47 @@ void lora_test_entry()
       {
           case DEVICE_STATE_RESTORE:
           {
+               // Try to restore from NVM and query the mac if possible.
+              if( NvmCtxMgmtRestore( ) == NVMCTXMGMT_STATUS_SUCCESS )
+              {
+                  printf( "\n###### ===== CTXS RESTORED ==== ######\n\n" );
+              } 
+              else 
+              {
+                  // Read secure-element DEV_EUI, JOI_EUI and SE_PIN values.
+                  mibReq.Type = MIB_DEV_EUI;
+                  LoRaMacMibGetRequestConfirm( &mibReq );
+                  memcpy1( devEui, mibReq.Param.DevEui, 8 );
 
-              // Read secure-element DEV_EUI, JOI_EUI and SE_PIN values.
-              mibReq.Type = MIB_DEV_EUI;
-              LoRaMacMibGetRequestConfirm( &mibReq );
-              memcpy1( devEui, mibReq.Param.DevEui, 8 );
+                  mibReq.Type = MIB_JOIN_EUI;
+                  LoRaMacMibGetRequestConfirm( &mibReq );
+                  memcpy1( joinEui, mibReq.Param.JoinEui, 8 );
 
-              mibReq.Type = MIB_JOIN_EUI;
-              LoRaMacMibGetRequestConfirm( &mibReq );
-              memcpy1( joinEui, mibReq.Param.JoinEui, 8 );
+                  mibReq.Type = MIB_SE_PIN;
+                  LoRaMacMibGetRequestConfirm( &mibReq );
+                  memcpy1( sePin, mibReq.Param.SePin, 4 );
+    #if( OVER_THE_AIR_ACTIVATION == 0 )
+                  // Tell the MAC layer which network server version are we connecting too.
+                  mibReq.Type = MIB_ABP_LORAWAN_VERSION;
+                  mibReq.Param.AbpLrWanVersion.Value = ABP_ACTIVATION_LRWAN_VERSION;
+                  LoRaMacMibSetRequestConfirm( &mibReq );
 
-              mibReq.Type = MIB_SE_PIN;
-              LoRaMacMibGetRequestConfirm( &mibReq );
-              memcpy1( sePin, mibReq.Param.SePin, 4 );
-#if( OVER_THE_AIR_ACTIVATION == 0 )
-              // Tell the MAC layer which network server version are we connecting too.
-              mibReq.Type = MIB_ABP_LORAWAN_VERSION;
-              mibReq.Param.AbpLrWanVersion.Value = ABP_ACTIVATION_LRWAN_VERSION;
-              LoRaMacMibSetRequestConfirm( &mibReq );
+                  mibReq.Type = MIB_NET_ID;
+                  mibReq.Param.NetID = LORAWAN_NETWORK_ID;
+                  LoRaMacMibSetRequestConfirm( &mibReq );
 
-              mibReq.Type = MIB_NET_ID;
-              mibReq.Param.NetID = LORAWAN_NETWORK_ID;
-              LoRaMacMibSetRequestConfirm( &mibReq );
+    #if( STATIC_DEVICE_ADDRESS != 1 )
+                   // Random seed initialization
+                   srand1( BoardGetRandomSeed( ) );
+                   // Choose a random device address
+                   DevAddr = randr( 0, 0x01FFFFFF );
+    #endif
 
-#if( STATIC_DEVICE_ADDRESS != 1 )
-               // Random seed initialization
-               srand1( BoardGetRandomSeed( ) );
-               // Choose a random device address
-               DevAddr = randr( 0, 0x01FFFFFF );
-#endif
-
-              mibReq.Type = MIB_DEV_ADDR;
-              mibReq.Param.DevAddr = DevAddr;
-              LoRaMacMibSetRequestConfirm( &mibReq );
-#endif // #if( OVER_THE_AIR_ACTIVATION == 0 )
+                  mibReq.Type = MIB_DEV_ADDR;
+                  mibReq.Param.DevAddr = DevAddr;
+                  LoRaMacMibSetRequestConfirm( &mibReq );
+  #endif // #if( OVER_THE_AIR_ACTIVATION == 0 )
+              }
               DeviceState = DEVICE_STATE_START;
               break;
           }
@@ -1397,7 +1410,7 @@ void DEMO_RUNNER_RunDemos( void )
                               democonfigDEMO_STACKSIZE );
 */
                                   
-    xTaskCreate(lora_test_entry, "lora", configMINIMAL_STACK_SIZE + 0x40, NULL, tskIDLE_PRIORITY + 1, &mTask_lora);
+    xTaskCreate(lora_test_entry, "lora", configMINIMAL_STACK_SIZE + 0x100, NULL, tskIDLE_PRIORITY + 1, &mTask_lora);
 
 }
 

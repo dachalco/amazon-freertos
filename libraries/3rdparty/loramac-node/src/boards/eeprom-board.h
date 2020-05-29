@@ -68,6 +68,8 @@ void EepromMcuSetDeviceAddr( uint8_t addr );
  */
 uint8_t EepromMcuGetDeviceAddr( void );
 
+void FlashPrintDiagnostics();
+
 #ifdef __cplusplus
 }
 #endif

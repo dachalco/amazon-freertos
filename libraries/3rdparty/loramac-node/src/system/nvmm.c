@@ -87,8 +87,14 @@ NvmmStatus_t NvmmDeclare( NvmmDataBlock_t* dataB, size_t num )
         DataBlockHeader_t dataBHdr;
         dataBHdr.CSum = 0;
         dataBHdr.Num = num;
+        printf("[W] virt-addr=%x    num=%x    checksum=%x\n", dataB->virtualAddr, dataBHdr.Num, dataBHdr.CSum);
         EepromWriteBuffer( ( dataB->virtualAddr - sizeof( DataBlockHeader_t ) ), ( uint8_t* ) &dataBHdr, sizeof( DataBlockHeader_t ) );
-
+        
+        // TODO> Remove from here
+        EepromReadBuffer( ( dataB->virtualAddr - sizeof( DataBlockHeader_t ) ), ( uint8_t* ) &dataBHdr, sizeof( DataBlockHeader_t ) );
+        printf("[R] virt-addr=%x    num=%x    checksum=%x\n", dataB->virtualAddr, dataBHdr.Num, dataBHdr.CSum);
+        // TODO To here
+    
         retval = NVMM_FAIL_CHECKSUM;
     }
 
@@ -104,6 +110,7 @@ NvmmStatus_t NvmmVerify( NvmmDataBlock_t* dataB, size_t num )
     // Read the data block header to obtain the size of data block
     EepromReadBuffer( ( dataB->virtualAddr - sizeof( DataBlockHeader_t ) ), ( uint8_t* ) &dataBHdr, sizeof( DataBlockHeader_t ) );
 
+    printf("[R] virt-addr=%x    num=%x    checksum=%x\n", dataB->virtualAddr, dataBHdr.Num, dataBHdr.CSum);
     // Catch already a mismatch of sizes
     if( num != dataBHdr.Num )
     {
@@ -129,6 +136,7 @@ NvmmStatus_t NvmmWrite( NvmmDataBlock_t* dataB, void* src, size_t num )
 
     // Read the data block header to obtain the maximum allowed size to write
     EepromReadBuffer( ( dataB->virtualAddr - sizeof( DataBlockHeader_t ) ), ( uint8_t* ) &dataBHdr, sizeof( dataBHdr ) );
+    printf("[R] virt-addr=%x    num=%x    checksum=%x\n", dataB->virtualAddr, dataBHdr.Num, dataBHdr.CSum);
 
     if( num > dataBHdr.Num )
     {
@@ -140,6 +148,9 @@ NvmmStatus_t NvmmWrite( NvmmDataBlock_t* dataB, void* src, size_t num )
 
     // Update data block header
     EepromWriteBuffer( ( dataB->virtualAddr - sizeof( DataBlockHeader_t ) ), ( uint8_t* ) &dataBHdr, sizeof( DataBlockHeader_t ) );
+    printf("[W] virt-addr=%x    num=%x    checksum=%x\n", dataB->virtualAddr, dataBHdr.Num, dataBHdr.CSum);
+    EepromReadBuffer( ( dataB->virtualAddr - sizeof( DataBlockHeader_t ) ), ( uint8_t* ) &dataBHdr, sizeof( dataBHdr ) ); // TODO: Delete me
+    printf("[R] virt-addr=%x    num=%x    checksum=%x\n", dataB->virtualAddr, dataBHdr.Num, dataBHdr.CSum);
 
     // Write data block
     EepromWriteBuffer( dataB->virtualAddr, ( uint8_t* ) src, num );

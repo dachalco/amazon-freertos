@@ -41,7 +41,7 @@
  * Enables/Disables the context storage management storage at all. Must be enabled for LoRaWAN 1.1.x.
  * WARNING: Still under development and not tested yet.
  */
-#define CONTEXT_MANAGEMENT_ENABLED         0
+#define CONTEXT_MANAGEMENT_ENABLED         1
 
 /*!
  * Enables/Disables maximum persistent context storage management. All module contexts will be saved on a non-volatile memory.

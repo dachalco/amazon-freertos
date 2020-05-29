@@ -716,6 +716,10 @@
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/systime.c" />
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/systime.h" />
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/timer.h" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/nvmm.c" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/nvmm.h" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/eeprom.c" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/system/eeprom.h" />
         </folder>
         <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/utilities.h" />
         <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/board.c" />
@@ -723,12 +727,17 @@
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/delay-board.c" />
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/rtc-board.c" />
           <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/rtc-board.h" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/nrf52/eeprom-board.c" />
+          <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/eeprom-board.h" />
         </folder>
         <file file_name="../../../../../libraries/3rdparty/loramac-node/src/boards/mcu/utilities.c" />
       </folder>
       <folder Name="debug">
         <file file_name="lora-debug.c" />
         <file file_name="lora-debug.h" />
+      </folder>
+      <folder Name="app">
+        <file file_name="../../../../../libraries/3rdparty/loramac-node/src/apps/LoRaMac/common/NvmCtxMgmt.c" />
       </folder>
     </folder>
   </project>

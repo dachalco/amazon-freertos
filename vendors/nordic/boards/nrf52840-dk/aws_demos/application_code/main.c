@@ -70,6 +70,9 @@
     #include "nrf_uarte.h"
 #endif
 
+#include "eeprom-board.h"
+
+
 /* clang-format off */
 
 /* Logging Task Defines. */
@@ -345,13 +348,13 @@ int main( void )
     /* Perform any hardware initialization that does not require the RTOS to be
      * running.  */
     prvMiscInitialization();
-/*
-    xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
-                            tskIDLE_PRIORITY,
-                            mainLOGGING_MESSAGE_QUEUE_LENGTH );
-*/
 
-    //nrf_sdh_freertos_init( NULL, NULL );// Don't care about their bluetooth soft device for now
+ //   xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
+ //                           tskIDLE_PRIORITY,
+ //                           mainLOGGING_MESSAGE_QUEUE_LENGTH );
+
+
+    //nrf_sdh_freertos_init( NULL, NULL );
     //ret_code_t xErrCode = pm_init();
     vTaskStartScheduler();
 
