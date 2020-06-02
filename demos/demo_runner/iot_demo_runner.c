@@ -1353,7 +1353,10 @@ void lora_test_entry()
           }
           case DEVICE_STATE_SLEEP:
           {
-
+              if( NvmCtxMgmtStore( ) == NVMCTXMGMT_STATUS_SUCCESS )
+              {
+                  printf( "\n###### ===== CTXS STORED ==== ######\n" );
+              }
 
               if( IsMacProcessPending == 1 )
               {
@@ -1410,7 +1413,7 @@ void DEMO_RUNNER_RunDemos( void )
                               democonfigDEMO_STACKSIZE );
 */
                                   
-    xTaskCreate(lora_test_entry, "lora", configMINIMAL_STACK_SIZE + 0x100, NULL, tskIDLE_PRIORITY + 1, &mTask_lora);
+    xTaskCreate(lora_test_entry, "lora", configMINIMAL_STACK_SIZE + 0x1000, NULL, tskIDLE_PRIORITY + 1, &mTask_lora);
 
 }
 

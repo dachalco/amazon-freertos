@@ -184,9 +184,9 @@ void FlashPrintDiagnostics()
 
     fds_stat_t stat = {0};
     configASSERT(NRF_SUCCESS == fds_stat(&stat));
-/*
+
     printf("\n\nFlash Diagnostics:\n");
-    printf("%-6d  4K Pages Available\n", stat.pages_available);
+    printf("%-6d  Pages Available\n", stat.pages_available);
     printf("%-6d  Open Records\n", stat.open_records);
     printf("%-6d  Valid Records\n", stat.valid_records);
     printf("%-6d  Dirty Records\n", stat.dirty_records);
@@ -195,8 +195,6 @@ void FlashPrintDiagnostics()
     printf("%-6d  Largest Contiguous\n", stat.words_used);
     printf("%-6d  Freeable Words\n", stat.freeable_words);
     printf("%-6d  Atleast One Corruption\n\n", stat.corruption);
-    */
-
 }
 
 void EepromMcuInit()
@@ -204,6 +202,8 @@ void EepromMcuInit()
     /* Register first to receive an event when initialization is complete. */
     fds_register(fds_evt_handler);
     configASSERT(NRF_SUCCESS == fds_init());
+
+    /*
     
     /* Wait for fds to initialize. */
     wait_for_fds_ready();

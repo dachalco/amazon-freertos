@@ -47,7 +47,7 @@
  * Enables/Disables maximum persistent context storage management. All module contexts will be saved on a non-volatile memory.
  * WARNING: Still under development and not tested yet.
  */
-#define MAX_PERSISTENT_CTX_MGMT_ENABLED    0
+#define MAX_PERSISTENT_CTX_MGMT_ENABLED    1
 
 #if ( MAX_PERSISTENT_CTX_MGMT_ENABLED == 1 )
 #define NVM_CTX_STORAGE_MASK               0xFF
@@ -231,7 +231,7 @@ NvmCtxMgmtStatus_t NvmCtxMgmtStore( void )
             return NVMCTXMGMT_STATUS_FAIL;
         }
     }
-
+#ifdef LORAMAC_CLASSB_ENABLED
     if( CtxUpdateStatus.Elements.ClassB == 1 )
     {
         if( NvmmWrite( &ClassBNvmCtxDataBlock, MacContexts->ClassBNvmCtx, MacContexts->ClassBNvmCtxSize ) != NVMM_SUCCESS )
@@ -239,7 +239,7 @@ NvmCtxMgmtStatus_t NvmCtxMgmtStore( void )
             return NVMCTXMGMT_STATUS_FAIL;
         }
     }
-
+#endif
     if( CtxUpdateStatus.Elements.ConfirmQueue == 1 )
     {
         if( NvmmWrite( &ConfirmQueueNvmCtxDataBlock, MacContexts->ConfirmQueueNvmCtx, MacContexts->ConfirmQueueNvmCtxSize ) != NVMM_SUCCESS )
