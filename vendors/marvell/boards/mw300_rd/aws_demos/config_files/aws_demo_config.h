@@ -42,7 +42,7 @@
  *
  *  These defines are used in iot_demo_runner.h for demo selection */
 
-#define CONFIG_MQTT_DEMO_ENABLED
+#define CONFIG_MQTT_SHADOW_DEMO_ENABLED
 
 /* Default configuration for all demos. Individual demos can override these below */
 #define democonfigDEMO_STACKSIZE               ( configMINIMAL_STACK_SIZE * 8 )
@@ -79,6 +79,10 @@ to perform a TLS negotiation. */
 /* Shadow demo task parameters. */
 #define democonfigSHADOW_DEMO_TASK_STACK_SIZE              ( configMINIMAL_STACK_SIZE * 4 )
 #define democonfigSHADOW_DEMO_TASK_PRIORITY                ( tskIDLE_PRIORITY )
+
+/* Mqtt+Shadow demo task parameters. */
+#define democonfigMQTT_SHADOW_DEMO_TASK_STACK_SIZE              ( configMINIMAL_STACK_SIZE * 8 )
+#define democonfigMQTT_SHADOW_DEMO_TASK_PRIORITY                ( tskIDLE_PRIORITY + 5 )
 
 /* Number of shadow light switch tasks running. */
 #define democonfigSHADOW_DEMO_NUM_TASKS                    ( 1 )
