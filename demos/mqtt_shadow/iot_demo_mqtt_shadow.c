@@ -24,8 +24,8 @@
  */
 
 /**
- * @file iot_demo_mqtt.c
- * @brief Demonstrates usage of the MQTT library.
+ * @file iot_demo_mqtt_shadow.c
+ * @brief Demonstrates usage of the MQTT library alongside SHADOW library.
  */
 
 /* The config header is always included first. */
@@ -47,6 +47,13 @@
 /* MQTT include. */
 #include "iot_mqtt.h"
 
+/* Shadow include. */
+#include "aws_iot_shadow.h"
+
+/* JSON utilities include. */
+#include "iot_json_utils.h"
+
+/*-----------------------------------------------------------*/
 /**
  * @cond DOXYGEN_IGNORE
  * Doxygen should ignore this section.
@@ -94,11 +101,6 @@
  * An MQTT ping request will be sent periodically at this interval.
  */
 #define KEEP_ALIVE_SECONDS                       ( 60 )
-
-/**
- * @brief The timeout for MQTT operations in this demo.
- */
-#define MQTT_TIMEOUT_MS                          ( 5000 )
 
 /**
  * @brief The Last Will and Testament topic name in this demo.
@@ -179,12 +181,105 @@
 
 /*-----------------------------------------------------------*/
 
+/**
+ * @cond DOXYGEN_IGNORE
+ * Doxygen should ignore this section.
+ *
+ * Provide default values for undefined configuration settings.
+ */
+#ifndef AWS_IOT_DEMO_SHADOW_UPDATE_COUNT
+#define AWS_IOT_DEMO_SHADOW_UPDATE_COUNT        ( 20 )
+#endif
+#ifndef AWS_IOT_DEMO_SHADOW_UPDATE_PERIOD_MS
+#define AWS_IOT_DEMO_SHADOW_UPDATE_PERIOD_MS    ( 3000 )
+#endif
+/** @endcond */
+
+/* Validate Shadow demo configuration settings. */
+#if AWS_IOT_DEMO_SHADOW_UPDATE_COUNT <= 0
+#error "AWS_IOT_DEMO_SHADOW_UPDATE_COUNT cannot be 0 or negative."
+#endif
+#if AWS_IOT_DEMO_SHADOW_UPDATE_PERIOD_MS <= 0
+#error "AWS_IOT_DEMO_SHADOW_UPDATE_PERIOD_MS cannot be 0 or negative."
+#endif
+
+/**
+ * @brief The keep-alive interval used for this demo.
+ *
+ * An MQTT ping request will be sent periodically at this interval.
+ */
+#define KEEP_ALIVE_SECONDS    ( 60 )
+
+/**
+ * @brief The timeout for Shadow and MQTT operations in this demo.
+ */
+#define TIMEOUT_MS            ( 5000 )
+
+/**
+ * @brief Format string representing a Shadow document with a "desired" state.
+ *
+ * Note the client token, which is required for all Shadow updates. The client
+ * token must be unique at any given time, but may be reused once the update is
+ * completed. For this demo, a timestamp is used for a client token.
+ */
+#define SHADOW_DESIRED_JSON     \
+    "{"                         \
+    "\"state\":{"               \
+    "\"desired\":{"             \
+    "\"powerOn\":%01d"          \
+    "}"                         \
+    "},"                        \
+    "\"clientToken\":\"%06lu\"" \
+    "}"
+
+/**
+ * @brief The expected size of #SHADOW_DESIRED_JSON.
+ *
+ * Because all the format specifiers in #SHADOW_DESIRED_JSON include a length,
+ * its full size is known at compile-time.
+ */
+#define EXPECTED_DESIRED_JSON_SIZE    ( sizeof( SHADOW_DESIRED_JSON ) - 3 )
+
+/**
+ * @brief Format string representing a Shadow document with a "reported" state.
+ *
+ * Note the client token, which is required for all Shadow updates. The client
+ * token must be unique at any given time, but may be reused once the update is
+ * completed. For this demo, a timestamp is used for a client token.
+ */
+#define SHADOW_REPORTED_JSON    \
+    "{"                         \
+    "\"state\":{"               \
+    "\"reported\":{"            \
+    "\"powerOn\":%01d"          \
+    "}"                         \
+    "},"                        \
+    "\"clientToken\":\"%06lu\"" \
+    "}"
+
+/**
+ * @brief The expected size of #SHADOW_REPORTED_JSON.
+ *
+ * Because all the format specifiers in #SHADOW_REPORTED_JSON include a length,
+ * its full size is known at compile-time.
+ */
+#define EXPECTED_REPORTED_JSON_SIZE    ( sizeof( SHADOW_REPORTED_JSON ) - 3 )
+
+
+/*-----------------------------------------------------------*/
+/* Declaration of shadow demo function. */
+int RunShadowDemoShared( const char * pIdentifier,
+                         const IotMqttConnection_t mqttConnection );
+
+/* Declaration of mqtt demo function. */
+int RunMqttDemoShared( const IotMqttConnection_t mqttConnection );
+
 /* Declaration of demo function. */
 int RunMqttShadowDemo( bool awsIotMqttMode,
-                 const char * pIdentifier,
-                 void * pNetworkServerInfo,
-                 void * pNetworkCredentialInfo,
-                 const IotNetworkInterface_t * pNetworkInterface );
+                       const char * pIdentifier,
+                       void * pNetworkServerInfo,
+                       void * pNetworkCredentialInfo,
+                       const IotNetworkInterface_t * pNetworkInterface );
 
 /*-----------------------------------------------------------*/
 
@@ -236,7 +331,7 @@ static void _clientPublishedCallback(void * param1,
  * the MQTT library.
  */
 static void _serverPublishedCallback( void * param1,
-                                       IotMqttCallbackParam_t * const pPublish )
+                                      IotMqttCallbackParam_t * const pPublish )
 {
     int acknowledgementLength = 0;
     size_t messageNumberIndex = 0, messageNumberLength = 1;
@@ -341,7 +436,7 @@ static void _serverPublishedCallback( void * param1,
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Initialize the MQTT library.
+ * @brief Initialize the the MQTT library and the Shadow library.
  *
  * @return `EXIT_SUCCESS` if all libraries were successfully initialized;
  * `EXIT_FAILURE` otherwise.
@@ -350,141 +445,56 @@ static int _initializeDemo( void )
 {
     int status = EXIT_SUCCESS;
     IotMqttError_t mqttInitStatus = IOT_MQTT_SUCCESS;
+    AwsIotShadowError_t shadowInitStatus = AWS_IOT_SHADOW_SUCCESS;
 
+    /* Flags to track cleanup on error. */
+    bool mqttInitialized = false;
+
+    /* Initialize the MQTT library. */
     mqttInitStatus = IotMqtt_Init();
 
-    if( mqttInitStatus != IOT_MQTT_SUCCESS )
+    if( mqttInitStatus == IOT_MQTT_SUCCESS )
     {
-        /* Failed to initialize MQTT library. */
-        status = EXIT_FAILURE;
-    }
-
-    return status;
-}
-
-/*-----------------------------------------------------------*/
-
-/**
- * @brief Clean up the MQTT library.
- */
-static void _cleanupDemo( void )
-{
-    IotMqtt_Cleanup();
-}
-
-/*-----------------------------------------------------------*/
-
-/**
- * @brief Establish a new connection to the MQTT server.
- *
- * @param[in] awsIotMqttMode Specify if this demo is running with the AWS IoT
- * MQTT server. Set this to `false` if using another MQTT server.
- * @param[in] pIdentifier NULL-terminated MQTT client identifier.
- * @param[in] pNetworkServerInfo Passed to the MQTT connect function when
- * establishing the MQTT connection.
- * @param[in] pNetworkCredentialInfo Passed to the MQTT connect function when
- * establishing the MQTT connection.
- * @param[in] pNetworkInterface The network interface to use for this demo.
- * @param[out] pMqttConnection Set to the handle to the new MQTT connection.
- *
- * @return `EXIT_SUCCESS` if the connection is successfully established; `EXIT_FAILURE`
- * otherwise.
- */
-static int _establishMqttConnection( bool awsIotMqttMode,
-                                     const char * pIdentifier,
-                                     void * pNetworkServerInfo,
-                                     void * pNetworkCredentialInfo,
-                                     const IotNetworkInterface_t * pNetworkInterface,
-                                     IotMqttConnection_t * pMqttConnection )
-{
-    int status = EXIT_SUCCESS;
-    IotMqttError_t connectStatus = IOT_MQTT_STATUS_PENDING;
-    IotMqttNetworkInfo_t networkInfo = IOT_MQTT_NETWORK_INFO_INITIALIZER;
-    IotMqttConnectInfo_t connectInfo = IOT_MQTT_CONNECT_INFO_INITIALIZER;
-    IotMqttPublishInfo_t willInfo = IOT_MQTT_PUBLISH_INFO_INITIALIZER;
-    char pClientIdentifierBuffer[ CLIENT_IDENTIFIER_MAX_LENGTH ] = { 0 };
-
-    /* Set the members of the network info not set by the initializer. This
-     * struct provided information on the transport layer to the MQTT connection. */
-    networkInfo.createNetworkConnection = true;
-    networkInfo.u.setup.pNetworkServerInfo = pNetworkServerInfo;
-    networkInfo.u.setup.pNetworkCredentialInfo = pNetworkCredentialInfo;
-    networkInfo.pNetworkInterface = pNetworkInterface;
-
-    #if ( IOT_MQTT_ENABLE_SERIALIZER_OVERRIDES == 1 ) && defined( IOT_DEMO_MQTT_SERIALIZER )
-        networkInfo.pMqttSerializer = IOT_DEMO_MQTT_SERIALIZER;
-    #endif
-
-    /* Set the members of the connection info not set by the initializer. */
-    connectInfo.awsIotMqttMode = awsIotMqttMode;
-    connectInfo.cleanSession = true;
-    connectInfo.keepAliveSeconds = KEEP_ALIVE_SECONDS;
-    connectInfo.pWillInfo = &willInfo;
-
-    /* Set the members of the Last Will and Testament (LWT) message info. The
-     * MQTT server will publish the LWT message if this client disconnects
-     * unexpectedly. */
-    willInfo.pTopicName = WILL_TOPIC_NAME;
-    willInfo.topicNameLength = WILL_TOPIC_NAME_LENGTH;
-    willInfo.pPayload = WILL_MESSAGE;
-    willInfo.payloadLength = WILL_MESSAGE_LENGTH;
-
-    /* Use the parameter client identifier if provided. Otherwise, generate a
-     * unique client identifier. */
-    if( ( pIdentifier != NULL ) && ( pIdentifier[ 0 ] != '\0' ) )
-    {
-        connectInfo.pClientIdentifier = pIdentifier;
-        connectInfo.clientIdentifierLength = ( uint16_t ) strlen( pIdentifier );
+        mqttInitialized = true;
     }
     else
     {
-        /* Every active MQTT connection must have a unique client identifier. The demos
-         * generate this unique client identifier by appending a timestamp to a common
-         * prefix. */
-        status = snprintf( pClientIdentifierBuffer,
-                           CLIENT_IDENTIFIER_MAX_LENGTH,
-                           CLIENT_IDENTIFIER_PREFIX "%lu",
-                           ( long unsigned int ) IotClock_GetTimeMs() );
+        status = EXIT_FAILURE;
+    }
 
-        /* Check for errors from snprintf. */
-        if( status < 0 )
+    /* Initialize the Shadow library. */
+    if( status == EXIT_SUCCESS )
+    {
+        /* Use the default MQTT timeout. */
+        shadowInitStatus = AwsIotShadow_Init( 0 );
+
+        if( shadowInitStatus != AWS_IOT_SHADOW_SUCCESS )
         {
-            IotLogError( "Failed to generate unique client identifier for demo." );
             status = EXIT_FAILURE;
-        }
-        else
-        {
-            /* Set the client identifier buffer and length. */
-            connectInfo.pClientIdentifier = pClientIdentifierBuffer;
-            connectInfo.clientIdentifierLength = ( uint16_t ) status;
-
-            status = EXIT_SUCCESS;
         }
     }
 
-    /* Establish the MQTT connection. */
-    if( status == EXIT_SUCCESS )
+    /* Clean up on error. */
+    if( status == EXIT_FAILURE )
     {
-        IotLogInfo( "MQTT demo client identifier is %.*s (length %hu).",
-                    connectInfo.clientIdentifierLength,
-                    connectInfo.pClientIdentifier,
-                    connectInfo.clientIdentifierLength );
-
-        connectStatus = IotMqtt_Connect( &networkInfo,
-                                         &connectInfo,
-                                         MQTT_TIMEOUT_MS,
-                                         pMqttConnection );
-
-        if( connectStatus != IOT_MQTT_SUCCESS )
+        if( mqttInitialized == true )
         {
-            IotLogError( "MQTT CONNECT returned error %s.",
-                         IotMqtt_strerror( connectStatus ) );
-
-            status = EXIT_FAILURE;
+            IotMqtt_Cleanup();
         }
     }
 
     return status;
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Clean up the the MQTT library and the Shadow library.
+ */
+static void _cleanupDemo( void )
+{
+    AwsIotShadow_Cleanup();
+    IotMqtt_Cleanup();
 }
 
 /*-----------------------------------------------------------*/
@@ -501,7 +511,7 @@ static int _establishMqttConnection( bool awsIotMqttMode,
  * @return `EXIT_SUCCESS` if the subscription operation succeeded; `EXIT_FAILURE`
  * otherwise.
  */
-static int _modifySubscriptions( IotMqttConnection_t mqttConnection,
+static int _modifySubscriptions( const IotMqttConnection_t mqttConnection,
                                  IotMqttOperationType_t operation,
                                  const char ** pTopicFilters,
                                  void * pCallbackParameter )
@@ -528,7 +538,7 @@ static int _modifySubscriptions( IotMqttConnection_t mqttConnection,
                                                      pSubscriptions,
                                                      TOPIC_FILTER_COUNT,
                                                      0,
-                                                     MQTT_TIMEOUT_MS );
+                                                     TIMEOUT_MS );
 
         /* Check the status of SUBSCRIBE. */
         switch( subscriptionStatus )
@@ -574,7 +584,7 @@ static int _modifySubscriptions( IotMqttConnection_t mqttConnection,
                                                        pSubscriptions,
                                                        TOPIC_FILTER_COUNT,
                                                        0,
-                                                       MQTT_TIMEOUT_MS );
+                                                       TIMEOUT_MS );
 
         /* Check the status of UNSUBSCRIBE. */
         if( subscriptionStatus != IOT_MQTT_SUCCESS )
@@ -608,7 +618,7 @@ static int _modifySubscriptions( IotMqttConnection_t mqttConnection,
  * @return `EXIT_SUCCESS` if all messages are published and received; `EXIT_FAILURE`
  * otherwise.
  */
-static int _publishAllMessages( IotMqttConnection_t mqttConnection,
+static int _publishAllMessages( const IotMqttConnection_t mqttConnection,
                                 const char ** pTopicNames,
                                 IotSemaphore_t * pPublishReceivedCounter )
 {
@@ -700,7 +710,7 @@ static int _publishAllMessages( IotMqttConnection_t mqttConnection,
             for( i = 0; i < IOT_DEMO_MQTT_PUBLISH_BURST_SIZE; i++ )
             {
                 if( IotSemaphore_TimedWait( pPublishReceivedCounter,
-                                            MQTT_TIMEOUT_MS ) == false )
+                                            TIMEOUT_MS ) == false )
                 {
                     IotLogError( "Timed out waiting for incoming PUBLISH messages." );
                     status = EXIT_FAILURE;
@@ -722,33 +732,18 @@ static int _publishAllMessages( IotMqttConnection_t mqttConnection,
     return status;
 }
 
-/*-----------------------------------------------------------*/
-
 /**
- * @brief The function that runs the MQTT demo, called by the demo runner.
+ * @brief The function that runs the MQTT demo.
  *
- * @param[in] awsIotMqttMode Specify if this demo is running with the AWS IoT
- * MQTT server. Set this to `false` if using another MQTT server.
- * @param[in] pIdentifier NULL-terminated MQTT client identifier.
- * @param[in] pNetworkServerInfo Passed to the MQTT connect function when
- * establishing the MQTT connection.
- * @param[in] pNetworkCredentialInfo Passed to the MQTT connect function when
- * establishing the MQTT connection.
- * @param[in] pNetworkInterface The network interface to use for this demo.
+ * @param[in] mqttConnection: An already successfully established MQTT Connection Handle. Intended to be shared with
+ *                            other functions.
  *
  * @return `EXIT_SUCCESS` if the demo completes successfully; `EXIT_FAILURE` otherwise.
  */
-int RunMqttShadowDemo( bool awsIotMqttMode,
-                 const char * pIdentifier,
-                 void * pNetworkServerInfo,
-                 void * pNetworkCredentialInfo,
-                 const IotNetworkInterface_t * pNetworkInterface )
+int RunMqttDemoShared( const IotMqttConnection_t mqttConnection )
 {
     /* Return value of this function and the exit status of this program. */
     int status = EXIT_SUCCESS;
-
-    /* Handle of the MQTT connection used in this demo. */
-    IotMqttConnection_t mqttConnection = IOT_MQTT_CONNECTION_INITIALIZER;
 
     /* Counts the number of incoming PUBLISHES received (and allows the demo
      * application to wait on incoming PUBLISH messages). */
@@ -756,38 +751,15 @@ int RunMqttShadowDemo( bool awsIotMqttMode,
 
     /* Topics used as both topic filters and topic names in this demo. */
     const char * pTopics[ TOPIC_FILTER_COUNT ] =
-    {
-        IOT_DEMO_MQTT_TOPIC_PREFIX "/topic/1",
-        IOT_DEMO_MQTT_TOPIC_PREFIX "/topic/2",
-        IOT_DEMO_MQTT_TOPIC_PREFIX "/topic/3",
-        IOT_DEMO_MQTT_TOPIC_PREFIX "/topic/4",
-    };
-
-    /* Flags for tracking which cleanup functions must be called. */
-    bool librariesInitialized = false, connectionEstablished = false;
-
-    /* Initialize the libraries required for this demo. */
-    status = _initializeDemo();
+            {
+                    IOT_DEMO_MQTT_TOPIC_PREFIX "/topic/1",
+                    IOT_DEMO_MQTT_TOPIC_PREFIX "/topic/2",
+                    IOT_DEMO_MQTT_TOPIC_PREFIX "/topic/3",
+                    IOT_DEMO_MQTT_TOPIC_PREFIX "/topic/4",
+            };
 
     if( status == EXIT_SUCCESS )
     {
-        /* Mark the libraries as initialized. */
-        librariesInitialized = true;
-
-        /* Establish a new MQTT connection. */
-        status = _establishMqttConnection( awsIotMqttMode,
-                                           pIdentifier,
-                                           pNetworkServerInfo,
-                                           pNetworkCredentialInfo,
-                                           pNetworkInterface,
-                                           &mqttConnection );
-    }
-
-    if( status == EXIT_SUCCESS )
-    {
-        /* Mark the MQTT connection as established. */
-        connectionEstablished = true;
-
         /* Add the topic filter subscriptions used in this demo. */
         status = _modifySubscriptions( mqttConnection,
                                        IOT_MQTT_SUBSCRIBE,
@@ -826,17 +798,746 @@ int RunMqttShadowDemo( bool awsIotMqttMode,
                                        NULL );
     }
 
-    /* Disconnect the MQTT connection if it was established. */
-    if( connectionEstablished == true )
+    return status;
+}
+
+/*-----------------------------------------------------------*/
+
+
+/**
+ * @brief Parses a key in the "state" section of a Shadow delta document.
+ *
+ * @param[in] pDeltaDocument The Shadow delta document to parse.
+ * @param[in] deltaDocumentLength The length of `pDeltaDocument`.
+ * @param[in] pDeltaKey The key in the delta document to find. Must be NULL-terminated.
+ * @param[out] pDelta Set to the first character in the delta key.
+ * @param[out] pDeltaLength The length of the delta key.
+ *
+ * @return `true` if the given delta key is found; `false` otherwise.
+ */
+static bool _getDelta( const char * pDeltaDocument,
+                       size_t deltaDocumentLength,
+                       const char * pDeltaKey,
+                       const char ** pDelta,
+                       size_t * pDeltaLength )
+{
+    bool stateFound = false, deltaFound = false;
+    const size_t deltaKeyLength = strlen( pDeltaKey );
+    const char * pState = NULL;
+    size_t stateLength = 0;
+
+    /* Find the "state" key in the delta document. */
+    stateFound = IotJsonUtils_FindJsonValue( pDeltaDocument,
+                                             deltaDocumentLength,
+                                             "state",
+                                             5,
+                                             &pState,
+                                             &stateLength );
+
+    if( stateFound == true )
     {
+        /* Find the delta key within the "state" section. */
+        deltaFound = IotJsonUtils_FindJsonValue( pState,
+                                                 stateLength,
+                                                 pDeltaKey,
+                                                 deltaKeyLength,
+                                                 pDelta,
+                                                 pDeltaLength );
+    }
+    else
+    {
+        IotLogWarn( "Failed to find \"state\" in Shadow delta document." );
+    }
+
+    return deltaFound;
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Parses the "state" key from the "previous" or "current" sections of a
+ * Shadow updated document.
+ *
+ * @param[in] pUpdatedDocument The Shadow updated document to parse.
+ * @param[in] updatedDocumentLength The length of `pUpdatedDocument`.
+ * @param[in] pSectionKey Either "previous" or "current". Must be NULL-terminated.
+ * @param[out] pState Set to the first character in "state".
+ * @param[out] pStateLength Length of the "state" section.
+ *
+ * @return `true` if the "state" was found; `false` otherwise.
+ */
+static bool _getUpdatedState( const char * pUpdatedDocument,
+                              size_t updatedDocumentLength,
+                              const char * pSectionKey,
+                              const char ** pState,
+                              size_t * pStateLength )
+{
+    bool sectionFound = false, stateFound = false;
+    const size_t sectionKeyLength = strlen( pSectionKey );
+    const char * pSection = NULL;
+    size_t sectionLength = 0;
+
+    /* Find the given section in the updated document. */
+    sectionFound = IotJsonUtils_FindJsonValue( pUpdatedDocument,
+                                               updatedDocumentLength,
+                                               pSectionKey,
+                                               sectionKeyLength,
+                                               &pSection,
+                                               &sectionLength );
+
+    if( sectionFound == true )
+    {
+        /* Find the "state" key within the "previous" or "current" section. */
+        stateFound = IotJsonUtils_FindJsonValue( pSection,
+                                                 sectionLength,
+                                                 "state",
+                                                 5,
+                                                 pState,
+                                                 pStateLength );
+    }
+    else
+    {
+        IotLogWarn( "Failed to find section %s in Shadow updated document.",
+                    pSectionKey );
+    }
+
+    return stateFound;
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Shadow delta callback, invoked when the desired and updates Shadow
+ * states differ.
+ *
+ * This function simulates a device updating its state in response to a Shadow.
+ *
+ * @param[in] pCallbackContext Not used.
+ * @param[in] pCallbackParam The received Shadow delta document.
+ */
+static void _shadowDeltaCallback( void * pCallbackContext,
+                                  AwsIotShadowCallbackParam_t * pCallbackParam )
+{
+    bool deltaFound = false;
+    const char * pDelta = NULL;
+    size_t deltaLength = 0;
+    IotSemaphore_t * pDeltaSemaphore = pCallbackContext;
+    int updateDocumentLength = 0;
+    AwsIotShadowError_t updateStatus = AWS_IOT_SHADOW_STATUS_PENDING;
+    AwsIotShadowDocumentInfo_t updateDocument = AWS_IOT_SHADOW_DOCUMENT_INFO_INITIALIZER;
+
+    /* Stored state. */
+    static int32_t currentState = 0;
+
+    /* A buffer containing the update document. It has static duration to prevent
+     * it from being placed on the call stack. */
+    static char pUpdateDocument[ EXPECTED_REPORTED_JSON_SIZE + 1 ] = { 0 };
+
+    /* Check if there is a different "powerOn" state in the Shadow. */
+    deltaFound = _getDelta( pCallbackParam->u.callback.pDocument,
+                            pCallbackParam->u.callback.documentLength,
+                            "powerOn",
+                            &pDelta,
+                            &deltaLength );
+
+    if( deltaFound == true )
+    {
+        /* Change the current state based on the value in the delta document. */
+        if( *pDelta == '0' )
+        {
+            IotLogInfo( "%.*s changing state from %d to 0.",
+                        pCallbackParam->thingNameLength,
+                        pCallbackParam->pThingName,
+                        currentState );
+
+            currentState = 0;
+        }
+        else if( *pDelta == '1' )
+        {
+            IotLogInfo( "%.*s changing state from %d to 1.",
+                        pCallbackParam->thingNameLength,
+                        pCallbackParam->pThingName,
+                        currentState );
+
+            currentState = 1;
+        }
+        else
+        {
+            IotLogWarn( "Unknown powerOn state parsed from delta document." );
+        }
+
+        /* Set the common members to report the new state. */
+        updateDocument.pThingName = pCallbackParam->pThingName;
+        updateDocument.thingNameLength = pCallbackParam->thingNameLength;
+        updateDocument.u.update.pUpdateDocument = pUpdateDocument;
+        updateDocument.u.update.updateDocumentLength = EXPECTED_REPORTED_JSON_SIZE;
+
+        /* Generate a Shadow document for the reported state. To keep the client
+         * token within 6 characters, it is modded by 1000000. */
+        updateDocumentLength = snprintf( pUpdateDocument,
+                                         EXPECTED_REPORTED_JSON_SIZE + 1,
+                                         SHADOW_REPORTED_JSON,
+                                         ( int ) currentState,
+                                         ( long unsigned ) ( IotClock_GetTimeMs() % 1000000 ) );
+
+        if( ( size_t ) updateDocumentLength != EXPECTED_REPORTED_JSON_SIZE )
+        {
+            IotLogError( "Failed to generate reported state document for Shadow update." );
+        }
+        else
+        {
+            /* Send the Shadow update. Its result is not checked, as the Shadow updated
+             * callback will report if the Shadow was successfully updated. Because the
+             * Shadow is constantly updated in this demo, the "Keep Subscriptions" flag
+             * is passed to this function. */
+            updateStatus = AwsIotShadow_Update( pCallbackParam->mqttConnection,
+                                                &updateDocument,
+                                                AWS_IOT_SHADOW_FLAG_KEEP_SUBSCRIPTIONS,
+                                                NULL,
+                                                NULL );
+
+            if( updateStatus != AWS_IOT_SHADOW_STATUS_PENDING )
+            {
+                IotLogWarn( "%.*s failed to report new state.",
+                            pCallbackParam->thingNameLength,
+                            pCallbackParam->pThingName );
+            }
+            else
+            {
+                IotLogInfo( "%.*s sent new state report.",
+                            pCallbackParam->thingNameLength,
+                            pCallbackParam->pThingName );
+            }
+        }
+    }
+    else
+    {
+        IotLogWarn( "Failed to parse powerOn state from delta document." );
+    }
+
+    /* Post to the delta semaphore to unblock the thread sending Shadow updates. */
+    IotSemaphore_Post( pDeltaSemaphore );
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Shadow updated callback, invoked when the Shadow document changes.
+ *
+ * This function reports when a Shadow has been updated.
+ *
+ * @param[in] pCallbackContext Not used.
+ * @param[in] pCallbackParam The received Shadow updated document.
+ */
+static void _shadowUpdatedCallback( void * pCallbackContext,
+                                    AwsIotShadowCallbackParam_t * pCallbackParam )
+{
+    bool previousFound = false, currentFound = false;
+    const char * pPrevious = NULL, * pCurrent = NULL;
+    size_t previousLength = 0, currentLength = 0;
+
+    /* Silence warnings about unused parameters. */
+    ( void ) pCallbackContext;
+
+    /* Find the previous Shadow document. */
+    previousFound = _getUpdatedState( pCallbackParam->u.callback.pDocument,
+                                      pCallbackParam->u.callback.documentLength,
+                                      "previous",
+                                      &pPrevious,
+                                      &previousLength );
+
+    /* Find the current Shadow document. */
+    currentFound = _getUpdatedState( pCallbackParam->u.callback.pDocument,
+                                     pCallbackParam->u.callback.documentLength,
+                                     "current",
+                                     &pCurrent,
+                                     &currentLength );
+
+    /* Log the previous and current states. */
+    if( ( previousFound == true ) && ( currentFound == true ) )
+    {
+        IotLogInfo( "Shadow was updated!\r\n"
+                    "Previous: {\"state\":%.*s}\r\n"
+                    "Current:  {\"state\":%.*s}",
+                    previousLength,
+                    pPrevious,
+                    currentLength,
+                    pCurrent );
+    }
+    else
+    {
+        if( previousFound == false )
+        {
+            IotLogWarn( "Previous state not found in Shadow updated document." );
+        }
+
+        if( currentFound == false )
+        {
+            IotLogWarn( "Current state not found in Shadow updated document." );
+        }
+    }
+}
+
+
+/**
+ * @brief Establish a new connection to the MQTT server for the Mqtt+Shadow demo. Note that since this connection is
+ *        shared with Shadow functionality, which is specific to Iot Core, we are obliged to have IotMqttMode=true,
+ *        which configures keep-alive behaviour that is specific to IoT-Core
+ *
+ * @param[in] pIdentifier NULL-terminated MQTT client identifier. The Shadow
+ * demo will use the Thing Name as the client identifier.
+ * @param[in] pNetworkServerInfo Passed to the MQTT connect function when
+ * establishing the MQTT connection.
+ * @param[in] pNetworkCredentialInfo Passed to the MQTT connect function when
+ * establishing the MQTT connection.
+ * @param[in] pNetworkInterface The network interface to use for this demo.
+ * @param[out] pMqttConnection Set to the handle to the new MQTT connection.
+ *
+ * @return `EXIT_SUCCESS` if the connection is successfully established; `EXIT_FAILURE`
+ * otherwise.
+ */
+static int _establishMqttConnection( const char * pIdentifier,
+                                     void * pNetworkServerInfo,
+                                     void * pNetworkCredentialInfo,
+                                     const IotNetworkInterface_t * pNetworkInterface,
+                                     IotMqttConnection_t * pMqttConnection )
+{
+    int status = EXIT_SUCCESS;
+    IotMqttError_t connectStatus = IOT_MQTT_STATUS_PENDING;
+    IotMqttNetworkInfo_t networkInfo = IOT_MQTT_NETWORK_INFO_INITIALIZER;
+    IotMqttConnectInfo_t connectInfo = IOT_MQTT_CONNECT_INFO_INITIALIZER;
+    IotMqttPublishInfo_t willInfo = IOT_MQTT_PUBLISH_INFO_INITIALIZER;
+
+    if( pIdentifier == NULL )
+    {
+        IotLogError( "Shadow Thing Name must be provided." );
+
+        status = EXIT_FAILURE;
+    }
+
+    if( status == EXIT_SUCCESS )
+    {
+        /* Set the members of the network info not set by the initializer. This
+         * struct provided information on the transport layer to the MQTT connection. */
+        networkInfo.createNetworkConnection = true;
+        networkInfo.u.setup.pNetworkServerInfo = pNetworkServerInfo;
+        networkInfo.u.setup.pNetworkCredentialInfo = pNetworkCredentialInfo;
+        networkInfo.pNetworkInterface = pNetworkInterface;
+
+#if ( IOT_MQTT_ENABLE_SERIALIZER_OVERRIDES == 1 ) && defined( IOT_DEMO_MQTT_SERIALIZER )
+        networkInfo.pMqttSerializer = IOT_DEMO_MQTT_SERIALIZER;
+#endif
+
+        /* Set the members of the connection info not set by the initializer. */
+        connectInfo.awsIotMqttMode = true;
+        connectInfo.cleanSession = true;
+        connectInfo.keepAliveSeconds = KEEP_ALIVE_SECONDS;
+        connectInfo.pWillInfo = &willInfo;
+
+        /* Set the members of the Last Will and Testament (LWT) message info. The
+         * MQTT server will publish the LWT message if this client disconnects
+         * unexpectedly. */
+        willInfo.pTopicName = WILL_TOPIC_NAME;
+        willInfo.topicNameLength = WILL_TOPIC_NAME_LENGTH;
+        willInfo.pPayload = WILL_MESSAGE;
+        willInfo.payloadLength = WILL_MESSAGE_LENGTH;
+
+        /* AWS IoT recommends the use of the Thing Name as the MQTT client ID. */
+        connectInfo.pClientIdentifier = pIdentifier;
+        connectInfo.clientIdentifierLength = ( uint16_t ) strlen( pIdentifier );
+
+        IotLogInfo( "Shadow Thing Name and MQTT Client identifer are %.*s (length %hu).",
+                    connectInfo.clientIdentifierLength,
+                    connectInfo.pClientIdentifier,
+                    connectInfo.clientIdentifierLength );
+
+        /* Establish the MQTT connection. */
+        connectStatus = IotMqtt_Connect( &networkInfo,
+                                         &connectInfo,
+                                         TIMEOUT_MS,
+                                         pMqttConnection );
+
+        if( connectStatus != IOT_MQTT_SUCCESS )
+        {
+            IotLogError( "IotMqtt_Connect returned error %s.",
+                         IotMqtt_strerror( connectStatus ) );
+
+            status = EXIT_FAILURE;
+        }
+    }
+
+    return status;
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Set the Shadow callback functions used in this demo.
+ *
+ * @param[in] pDeltaSemaphore Used to synchronize Shadow updates with the delta
+ * callback.
+ * @param[in] mqttConnection The MQTT connection used for Shadows.
+ * @param[in] pThingName The Thing Name for Shadows in this demo.
+ * @param[in] thingNameLength The length of `pThingName`.
+ *
+ * @return `EXIT_SUCCESS` if all Shadow callbacks were set; `EXIT_FAILURE`
+ * otherwise.
+ */
+static int _setShadowCallbacks( IotSemaphore_t * pDeltaSemaphore,
+                                const IotMqttConnection_t mqttConnection,
+                                const char * pThingName,
+                                size_t thingNameLength )
+{
+    int status = EXIT_SUCCESS;
+    AwsIotShadowError_t callbackStatus = AWS_IOT_SHADOW_STATUS_PENDING;
+    AwsIotShadowCallbackInfo_t deltaCallback = AWS_IOT_SHADOW_CALLBACK_INFO_INITIALIZER,
+            updatedCallback = AWS_IOT_SHADOW_CALLBACK_INFO_INITIALIZER;
+
+    /* Set the functions for callbacks. */
+    deltaCallback.pCallbackContext = pDeltaSemaphore;
+    deltaCallback.function = _shadowDeltaCallback;
+    updatedCallback.function = _shadowUpdatedCallback;
+
+    /* Set the delta callback, which notifies of different desired and reported
+     * Shadow states. */
+    callbackStatus = AwsIotShadow_SetDeltaCallback( mqttConnection,
+                                                    pThingName,
+                                                    thingNameLength,
+                                                    0,
+                                                    &deltaCallback );
+
+    if( callbackStatus == AWS_IOT_SHADOW_SUCCESS )
+    {
+        /* Set the updated callback, which notifies when a Shadow document is
+         * changed. */
+        callbackStatus = AwsIotShadow_SetUpdatedCallback( mqttConnection,
+                                                          pThingName,
+                                                          thingNameLength,
+                                                          0,
+                                                          &updatedCallback );
+    }
+
+    if( callbackStatus != AWS_IOT_SHADOW_SUCCESS )
+    {
+        IotLogError( "Failed to set demo shadow callback, error %s.",
+                     AwsIotShadow_strerror( callbackStatus ) );
+
+        status = EXIT_FAILURE;
+    }
+
+    return status;
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Try to delete any Shadow document in the cloud.
+ *
+ * @param[in] mqttConnection The MQTT connection used for Shadows.
+ * @param[in] pThingName The Shadow Thing Name to delete.
+ * @param[in] thingNameLength The length of `pThingName`.
+ */
+static void _clearShadowDocument( IotMqttConnection_t mqttConnection,
+                                  const char * const pThingName,
+                                  size_t thingNameLength )
+{
+    AwsIotShadowError_t deleteStatus = AWS_IOT_SHADOW_STATUS_PENDING;
+
+    /* Delete any existing Shadow document so that this demo starts with an empty
+     * Shadow. */
+    deleteStatus = AwsIotShadow_TimedDelete( mqttConnection,
+                                             pThingName,
+                                             thingNameLength,
+                                             0,
+                                             TIMEOUT_MS );
+
+    /* Check for return values of "SUCCESS" and "NOT FOUND". Both of these values
+     * mean that the Shadow document is now empty. */
+    if( ( deleteStatus == AWS_IOT_SHADOW_SUCCESS ) || ( deleteStatus == AWS_IOT_SHADOW_NOT_FOUND ) )
+    {
+        IotLogInfo( "Successfully cleared Shadow of %.*s.",
+                    thingNameLength,
+                    pThingName );
+    }
+    else
+    {
+        IotLogWarn( "Shadow of %.*s not cleared.",
+                    thingNameLength,
+                    pThingName );
+    }
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Send the Shadow updates that will trigger the Shadow callbacks.
+ *
+ * @param[in] pDeltaSemaphore Used to synchronize Shadow updates with the delta
+ * callback.
+ * @param[in] mqttConnection The MQTT connection used for Shadows.
+ * @param[in] pThingName The Thing Name for Shadows in this demo.
+ * @param[in] thingNameLength The length of `pThingName`.
+ *
+ * @return `EXIT_SUCCESS` if all Shadow updates were sent; `EXIT_FAILURE`
+ * otherwise.
+ */
+static int _sendShadowUpdates( IotSemaphore_t * pDeltaSemaphore,
+                               IotMqttConnection_t mqttConnection,
+                               const char * const pThingName,
+                               size_t thingNameLength )
+{
+    int status = EXIT_SUCCESS;
+    int32_t i = 0, desiredState = 0;
+    AwsIotShadowError_t updateStatus = AWS_IOT_SHADOW_STATUS_PENDING;
+    AwsIotShadowDocumentInfo_t updateDocument = AWS_IOT_SHADOW_DOCUMENT_INFO_INITIALIZER;
+
+    /* A buffer containing the update document. It has static duration to prevent
+     * it from being placed on the call stack. */
+    static char pUpdateDocument[ EXPECTED_DESIRED_JSON_SIZE + 1 ] = { 0 };
+
+    /* Set the common members of the Shadow update document info. */
+    updateDocument.pThingName = pThingName;
+    updateDocument.thingNameLength = thingNameLength;
+    updateDocument.u.update.pUpdateDocument = pUpdateDocument;
+    updateDocument.u.update.updateDocumentLength = EXPECTED_DESIRED_JSON_SIZE;
+
+    /* Publish Shadow updates at a set period. */
+    for( i = 1; i <= AWS_IOT_DEMO_SHADOW_UPDATE_COUNT; i++ )
+    {
+        /* Toggle the desired state. */
+        desiredState = !( desiredState );
+
+        /* Generate a Shadow desired state document, using a timestamp for the client
+         * token. To keep the client token within 6 characters, it is modded by 1000000. */
+        status = snprintf( pUpdateDocument,
+                           EXPECTED_DESIRED_JSON_SIZE + 1,
+                           SHADOW_DESIRED_JSON,
+                           ( int ) desiredState,
+                           ( long unsigned ) ( IotClock_GetTimeMs() % 1000000 ) );
+
+        /* Check for errors from snprintf. The expected value is the length of
+         * the desired JSON document less the format specifier for the state. */
+        if( ( size_t ) status != EXPECTED_DESIRED_JSON_SIZE )
+        {
+            IotLogError( "Failed to generate desired state document for Shadow update"
+                         " %d of %d.", i, AWS_IOT_DEMO_SHADOW_UPDATE_COUNT );
+
+            status = EXIT_FAILURE;
+            break;
+        }
+        else
+        {
+            status = EXIT_SUCCESS;
+        }
+
+        IotLogInfo( "Sending Shadow update %d of %d: %s",
+                    i,
+                    AWS_IOT_DEMO_SHADOW_UPDATE_COUNT,
+                    pUpdateDocument );
+
+        /* Send the Shadow update. Because the Shadow is constantly updated in
+         * this demo, the "Keep Subscriptions" flag is passed to this function.
+         * Note that this flag only needs to be passed on the first call, but
+         * passing it for subsequent calls is fine.
+         */
+        updateStatus = AwsIotShadow_TimedUpdate( mqttConnection,
+                                                 &updateDocument,
+                                                 AWS_IOT_SHADOW_FLAG_KEEP_SUBSCRIPTIONS,
+                                                 TIMEOUT_MS );
+
+        /* Check the status of the Shadow update. */
+        if( updateStatus != AWS_IOT_SHADOW_SUCCESS )
+        {
+            IotLogError( "Failed to send Shadow update %d of %d, error %s.",
+                         i,
+                         AWS_IOT_DEMO_SHADOW_UPDATE_COUNT,
+                         AwsIotShadow_strerror( updateStatus ) );
+
+            status = EXIT_FAILURE;
+            break;
+        }
+        else
+        {
+            IotLogInfo( "Successfully sent Shadow update %d of %d.",
+                        i,
+                        AWS_IOT_DEMO_SHADOW_UPDATE_COUNT );
+
+            /* Wait for the delta callback to change its state before continuing. */
+            if( IotSemaphore_TimedWait( pDeltaSemaphore, TIMEOUT_MS ) == false )
+            {
+                IotLogError( "Timed out waiting on delta callback to change state." );
+
+                status = EXIT_FAILURE;
+                break;
+            }
+        }
+
+        IotClock_SleepMs( AWS_IOT_DEMO_SHADOW_UPDATE_PERIOD_MS );
+    }
+
+    return status;
+}
+
+/**
+ * @brief The function that runs the Shadow demo.
+ *
+ * @param[in] mqttConnection: An already successfully established MQTT Connection Handle. Intended to be shared with
+ *                            other functions.
+ *
+ * @return `EXIT_SUCCESS` if the demo completes successfully; `EXIT_FAILURE` otherwise.
+ */
+int RunShadowDemoShared( const char * pIdentifier,
+                   const IotMqttConnection_t mqttConnection )
+{
+    /* Return value of this function and the exit status of this program. */
+    int status = 0;
+
+    /* Length of Shadow Thing Name. */
+    size_t thingNameLength = 0;
+
+    /* Allows the Shadow update function to wait for the delta callback to complete
+     * a state change before continuing. */
+    IotSemaphore_t deltaSemaphore;
+
+    /* Flags for tracking which cleanup functions must be called. */
+    bool deltaSemaphoreCreated = false;
+
+    /* Determine the length of the Thing Name. */
+    if( pIdentifier != NULL )
+    {
+        thingNameLength = strlen( pIdentifier );
+
+        if( thingNameLength == 0 )
+        {
+            IotLogError( "The length of the Thing Name (identifier) must be nonzero." );
+
+            status = EXIT_FAILURE;
+        }
+    }
+    else
+    {
+        IotLogError( "A Thing Name (identifier) must be provided for the Shadow demo." );
+
+        status = EXIT_FAILURE;
+    }
+
+    if( status == EXIT_SUCCESS )
+    {
+        /* Create the semaphore that synchronizes with the delta callback. */
+        deltaSemaphoreCreated = IotSemaphore_Create( &deltaSemaphore, 0, 1 );
+
+        if( deltaSemaphoreCreated == false )
+        {
+            status = EXIT_FAILURE;
+        }
+    }
+
+    if( status == EXIT_SUCCESS )
+    {
+        /* Set the Shadow callbacks for this demo. */
+        status = _setShadowCallbacks( &deltaSemaphore,
+                                      mqttConnection,
+                                      pIdentifier,
+                                      thingNameLength );
+    }
+
+    if( status == EXIT_SUCCESS )
+    {
+        /* Clear the Shadow document so that this demo starts with no existing
+         * Shadow. */
+        _clearShadowDocument( mqttConnection, pIdentifier, thingNameLength );
+
+        /* Send Shadow updates. */
+        status = _sendShadowUpdates( &deltaSemaphore,
+                                     mqttConnection,
+                                     pIdentifier,
+                                     thingNameLength );
+
+        /* Delete the Shadow document created by this demo to clean up. */
+        _clearShadowDocument( mqttConnection, pIdentifier, thingNameLength );
+    }
+
+    /* Destroy the delta semaphore if it was created. */
+    if( deltaSemaphoreCreated == true )
+    {
+        IotSemaphore_Destroy( &deltaSemaphore );
+    }
+
+    return status;
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief The function that runs the MQTT demo, called by the demo runner.
+ *
+ * @param[in] awsIotMqttMode Specify if this demo is running with the AWS IoT
+ * MQTT server. Set this to `false` if using another MQTT server.
+ * @param[in] pIdentifier NULL-terminated MQTT client identifier.
+ * @param[in] pNetworkServerInfo Passed to the MQTT connect function when
+ * establishing the MQTT connection.
+ * @param[in] pNetworkCredentialInfo Passed to the MQTT connect function when
+ * establishing the MQTT connection.
+ * @param[in] pNetworkInterface The network interface to use for this demo.
+ *
+ * @return `EXIT_SUCCESS` if the demo completes successfully; `EXIT_FAILURE` otherwise.
+ */
+int RunMqttShadowDemo( bool awsIotMqttMode,
+                 const char * pIdentifier,
+                 void * pNetworkServerInfo,
+                 void * pNetworkCredentialInfo,
+                 const IotNetworkInterface_t * pNetworkInterface )
+{
+    /* Return value of this function and the exit status of this program. */
+    int status = EXIT_SUCCESS;
+
+    /* Handle of the MQTT connection to be shared by MQTT and Shadow demos */
+    IotMqttConnection_t mqttConnection = IOT_MQTT_CONNECTION_INITIALIZER;
+
+    /* Flags for tracking which cleanup functions must be called. */
+    bool librariesInitialized = false;
+
+    /* Initialize the libraries required for mqtt and shadow demos. */
+    status = _initializeDemo();
+
+    if ( status == EXIT_SUCCESS )
+    {
+        librariesInitialized = true;
+
+        /* Establish a new MQTT connection. */
+        status = _establishMqttConnection(pIdentifier,
+                                          pNetworkServerInfo,
+                                          pNetworkCredentialInfo,
+                                          pNetworkInterface,
+                                          &mqttConnection);
+    }
+
+
+    /* Run the demo if the libraries and mqtt connection were started successfully */
+    if ( status == EXIT_SUCCESS )
+    {
+        int statusMqtt = RunMqttDemoShared( mqttConnection );
+        int statusShadow = RunShadowDemoShared( pIdentifier, mqttConnection );
+
+        if ( statusMqtt == EXIT_SUCCESS && statusShadow == EXIT_SUCCESS)
+        {
+            status = EXIT_SUCCESS;
+        }
+        else
+        {
+            status = EXIT_FAILURE;
+        }
+
         IotMqtt_Disconnect( mqttConnection, 0 );
     }
 
     /* Clean up libraries if they were initialized. */
-    if( librariesInitialized == true )
+    if( librariesInitialized )
     {
         _cleanupDemo();
     }
+
+
 
     return status;
 }
