@@ -823,6 +823,9 @@ AwsIotShadowError_t _AwsIotShadow_ProcessOperation( IotMqttConnection_t mqttConn
 
 void _AwsIotShadow_Notify( _shadowOperation_t * pOperation )
 {
+    configPRINTF( ( "[DEBUG][NOTIFY]: type=%d    status=%d    length=%d\n%s\n",
+            pOperation->type, pOperation->status,
+            pOperation->u.get.documentLength, pOperation->u.get.pDocument ) );
     AwsIotShadowCallbackParam_t callbackParam = { .callbackType = ( AwsIotShadowCallbackType_t ) 0 };
     _shadowSubscription_t * pSubscription = pOperation->pSubscription,
                           * pRemovedSubscription = NULL;

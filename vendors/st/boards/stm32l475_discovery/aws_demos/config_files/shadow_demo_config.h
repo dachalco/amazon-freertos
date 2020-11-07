@@ -116,6 +116,6 @@
 /**
  * @brief Size of the network buffer for MQTT packets.
  */
-#define democonfigNETWORK_BUFFER_SIZE    ( 1024U )
+#define democonfigNETWORK_BUFFER_SIZE    ( 2 * 1024U )
 
 #endif /* SHADOW_DEMO_CONFIG_H */
