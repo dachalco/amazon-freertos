@@ -50,7 +50,8 @@ void uart_write( const char * const pcOutputBuffer,
 xConsoleIO_t uartConsoleIO =
 {
     .read  = uart_read,
-    .write = uart_write
+    .write = uart_write,
+    .xMutexIO = NULL
 };
 
 int32_t uart_read( char * const pcInputBuffer,

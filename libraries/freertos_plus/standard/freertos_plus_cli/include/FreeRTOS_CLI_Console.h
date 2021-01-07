@@ -32,6 +32,7 @@
 
 
 #include "FreeRTOS_CLI.h"
+#include "semphr.h"
 
 /**
  * Defines the interface for different console implementations. Interface
@@ -61,6 +62,11 @@ typedef struct xConsoleIO
      */
     void ( * write )( const char * const buffer,
                       uint32_t length );
+
+    /* Useful in case other threads or async sources need to use console IO and should wait until
+     * ongoing Console IO is complete -- to not interfere with shared output buffer */
+    SemaphoreHandle_t xMutexIO;
+    
 } xConsoleIO_t;
 
 

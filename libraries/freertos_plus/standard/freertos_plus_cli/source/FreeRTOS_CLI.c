@@ -154,8 +154,7 @@ BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
     const char * pcRegisteredCommandString;
     size_t xCommandStringLength;
 
-    /* Note:  This function is not re-entrant.  It must not be called from more
-     * than one task. */
+        
 
     if( pxCommand == NULL )
     {
