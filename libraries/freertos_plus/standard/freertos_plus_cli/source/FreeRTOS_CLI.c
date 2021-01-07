@@ -70,7 +70,7 @@ static int8_t prvGetNumberOfParameters( const char * pcCommandString );
 static const CLI_Command_Definition_t xHelpCommand =
 {
     "help",
-    "\r\nhelp:\r\n Lists all the registered commands\r\n\r\n",
+    "\r\nhelp:\r\n    Lists all the registered commands\r\n\r\n",
     prvHelpCommand,
     0
 };
@@ -144,6 +144,50 @@ BaseType_t FreeRTOS_CLIRegisterCommand( const CLI_Command_Definition_t * const p
     return xReturn;
 }
 /*-----------------------------------------------------------*/
+CLI_Command_Definition_t * FreeRTOS_CLIFindCommand( const char * const pcCommandInput )
+{
+    CLI_Command_Definition_t * pxMatch = NULL;
+    char * pcRegisteredCommandString = NULL;
+    size_t xCommandStringLength = 0;
+
+    /* Search for the command string in the list of registered commands. */
+    CLI_Definition_List_Item_t * pxCommand = NULL;
+    for( pxCommand = &xRegisteredCommands; pxCommand != NULL; pxCommand = pxCommand->pxNext )
+    {
+        pcRegisteredCommandString = pxCommand->pxCommandLineDefinition->pcCommand;
+        xCommandStringLength = strlen( pcRegisteredCommandString );
+
+        /* To ensure the string lengths match exactly, so as not to pick up
+            * a sub-string of a longer command, check the byte after the expected
+            * end of the string is either the end of the string or a space before
+            * a parameter. */
+        if( strncmp( pcCommandInput, pcRegisteredCommandString, xCommandStringLength ) == 0 )
+        {
+            if( ( pcCommandInput[ xCommandStringLength ] == ' ' ) || ( pcCommandInput[ xCommandStringLength ] == 0x00 ) )
+            {
+                if( pxCommand->pxCommandLineDefinition->cExpectedNumberOfParameters >= 0 )
+                {
+                    if( prvGetNumberOfParameters( pcCommandInput ) == pxCommand->pxCommandLineDefinition->cExpectedNumberOfParameters )
+                    {
+                        /* Matchhed keyword and expected n_args */
+                        pxMatch = pxCommand->pxCommandLineDefinition;
+                        break;
+                    }
+                }
+                else
+                {
+                    /* Matched key word w/ var args*/
+                    pxMatch = pxCommand->pxCommandLineDefinition;
+                    break;                
+                }
+            }
+        }
+    }
+
+    return pxMatch;
+}
+/*-----------------------------------------------------------*/
+
 
 BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
                                        char * pcWriteBuffer,

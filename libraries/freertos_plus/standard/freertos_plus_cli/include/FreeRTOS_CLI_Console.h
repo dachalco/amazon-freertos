@@ -69,6 +69,10 @@ typedef struct xConsoleIO
     
 } xConsoleIO_t;
 
+typedef enum {
+    COMMAND_START,
+    COMMAND_CANCEL
+} CommandNotification_t;
 
 /**
  * The function executes a non-terminating loop to fetch command from the console, parse
