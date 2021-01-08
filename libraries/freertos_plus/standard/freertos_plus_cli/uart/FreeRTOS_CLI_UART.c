@@ -51,7 +51,8 @@ xConsoleIO_t uartConsoleIO =
 {
     .read  = uart_read,
     .write = uart_write,
-    .xMutexIO = NULL
+    .xMutexIO = NULL,
+    .xQueue_InputLine = NULL
 };
 
 int32_t uart_read( char * const pcInputBuffer,

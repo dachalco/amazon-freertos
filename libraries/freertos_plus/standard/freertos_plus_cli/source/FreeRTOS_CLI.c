@@ -58,7 +58,8 @@ typedef struct xCOMMAND_INPUT_LIST
  */
 static BaseType_t prvHelpCommand( char * pcWriteBuffer,
                                   size_t xWriteBufferLen,
-                                  const char * pcCommandString );
+                                  const char * pcCommandString,
+                                  void * pvContext );
 
 /*
  * Return the number of parameters that follow the command name.
@@ -244,7 +245,7 @@ BaseType_t FreeRTOS_CLIProcessCommand( const char * const pcCommandInput,
     else if( pxCommand != NULL )
     {
         /* Call the callback function that is registered to this command. */
-        xReturn = pxCommand->pxCommandLineDefinition->pxCommandInterpreter( pcWriteBuffer, xWriteBufferLen, pcCommandInput );
+        xReturn = pxCommand->pxCommandLineDefinition->pxCommandInterpreter( pcWriteBuffer, xWriteBufferLen, pcCommandInput, NULL );
 
         /* If xReturn is pdFALSE, then no further strings will be returned
          * after this one, and	pxCommand can be reset to NULL ready to search
@@ -335,7 +336,8 @@ const char * FreeRTOS_CLIGetParameter( const char * pcCommandString,
 
 static BaseType_t prvHelpCommand( char * pcWriteBuffer,
                                   size_t xWriteBufferLen,
-                                  const char * pcCommandString )
+                                  const char * pcCommandString,
+                                  void * pvContext )
 {
     static const CLI_Definition_List_Item_t * pxCommand = NULL;
     BaseType_t xReturn;

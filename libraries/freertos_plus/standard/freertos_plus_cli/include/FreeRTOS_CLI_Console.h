@@ -34,6 +34,15 @@
 #include "FreeRTOS_CLI.h"
 #include "semphr.h"
 
+
+/* CLI conifguration */
+#define cmdDEFAULT_TASK_STACK_SIZE  ( configMINIMAL_STACK_SIZE * 4 )
+#define cmdDEFAULT_TASK_PRIORITY    ( tskIDLE_PRIORITY + 5 )
+
+#define cmdINPUT_QUEUE_LENGTH       4
+#define cmdMAX_INPUT_BUFFER_SIZE    50
+#define cmdMAX_ERROR_SIZE           50
+
 /**
  * Defines the interface for different console implementations. Interface
  * defines the contract of how bytes are transferred between console
@@ -66,7 +75,12 @@ typedef struct xConsoleIO
     /* Useful in case other threads or async sources need to use console IO and should wait until
      * ongoing Console IO is complete -- to not interfere with shared output buffer */
     SemaphoreHandle_t xMutexIO;
-    
+
+
+    /* The output is mutex, but the input is always handled by the console task.
+     * As a side benefit, this keeps a small history of commands which 
+     * can be recycled with arrow keys for example */
+    QueueHandle_t xQueue_InputLine;
 } xConsoleIO_t;
 
 typedef enum {
@@ -84,5 +98,8 @@ void FreeRTOS_CLIEnterConsoleLoop( xConsoleIO_t consoleIO,
                                    size_t commandBufferLength,
                                    char * pOutputBuffer,
                                    size_t outputBufferLength );
+
+/* Used to store history of commands and to forward console inputs to forked tasks */
+QueueHandle_t FreeRTOS_CLIGetInputQueue( xConsoleIO_t consoleIO );
 
 #endif /* ifndef FREERTOS_CLI_CONSOLE_H */

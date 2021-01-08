@@ -32,10 +32,12 @@
  * commands must comply.  pcWriteBuffer is a buffer into which the output from
  * executing the command can be written, xWriteBufferLen is the length, in bytes of
  * the pcWriteBuffer buffer, and pcCommandString is the entire string as input by
- * the user (from which parameters can be extracted).*/
+ * the user (from which parameters can be extracted). Context is provided to
+ * support simultaneous calls of a command */
 typedef BaseType_t (* pdCOMMAND_LINE_CALLBACK)( char * pcWriteBuffer,
                                                 size_t xWriteBufferLen,
-                                                const char * pcCommandString );
+                                                const char * pcCommandString,
+                                                void * pvContext);
 
 /* The structure that defines command line commands.  A command line command
  * should be defined by declaring a const structure of this type. */
