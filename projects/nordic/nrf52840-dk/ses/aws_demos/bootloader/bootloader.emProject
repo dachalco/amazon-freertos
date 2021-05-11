@@ -84,6 +84,12 @@
       <file file_name="bootloader_code/main.c" />
       <file file_name="bootloader_code/sdk_config.h" />
       <file file_name="bootloader_code/utils.c" />
+      <configuration Name="Release" build_exclude_from_build="No" />
+      <folder Name="mcuboot_include">
+        <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/mcuboot_config/mcuboot_config.h" />
+        <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/flash_map_backend/flash_map_backend.h" />
+        <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/sysflash/sysflash.h" />
+      </folder>
     </folder>
     <folder Name="None">
       <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/mdk/ses_startup_nrf52840.s" />
@@ -103,10 +109,32 @@
           <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/asn1parse.c" />
           <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/base64.c" />
         </folder>
+        <folder Name="mcuboot">
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/boot_record.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/bootutil_misc.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/bootutil_priv.h" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/bootutil_public.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/caps.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/encrypted.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/fault_injection_hardening_delay_rng_mbedtls.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/fault_injection_hardening.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/image_ec.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/image_ec256.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/image_ed25519.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/image_rsa.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/image_validate.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/loader.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/swap_misc.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/swap_move.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/swap_priv.h" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/swap_scratch.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/tlv.c" />
+        </folder>
       </folder>
     </folder>
     <configuration
       Name="Release"
+      c_user_include_directories=".;../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include;../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include"
       link_use_linker_script_file="No"
       linker_section_placement_file="flash_placement.xml" />
   </project>
