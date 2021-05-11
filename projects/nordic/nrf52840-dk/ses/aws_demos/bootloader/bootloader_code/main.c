@@ -228,7 +228,7 @@ void vCommitSecondBank()
 
 
 
-
+#if 0
 /**@brief Function for application main entry. */
 int main( void )
 {
@@ -410,6 +410,24 @@ int main( void )
         vBlinkLeds( LED_NO_CORRECT_FIRMWARE ); /* Will blink the LED2 indefinitely */
     }
 }
+#else
+#include "bootutil/bootutil.h"
+#include "bootutil/bootutil_log.h"
+int main( void )
+{
+    struct boot_rsp rsp;
+    int rc; 
+    fih_int fih_rc = FIH_FAILURE;
+
+    FIH_CALL(boot_go, fih_rc, &rsp);
+    if (fih_not_eq(fih_rc, FIH_SUCCESS)) 
+    {
+        BOOT_LOG_ERR("Unable to find bootable image");
+        FIH_PANIC;
+    }
+}
+#endif
+
 
 /**
  * @}

@@ -87,9 +87,11 @@
       <configuration Name="Release" build_exclude_from_build="No" />
       <folder Name="mcuboot_include">
         <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/mcuboot_config/mcuboot_config.h" />
-        <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/flash_map_backend/flash_map_backend.h" />
         <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/sysflash/sysflash.h" />
+        <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/mcuboot_config/mcuboot_logging.h" />
+        <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/flash_map_backend/flash_map_backend.h" />
       </folder>
+      <file file_name="../../../../../../vendors/nordic/boards/nrf52840-dk/ports/mcuboot/flash_map_backend.c" />
     </folder>
     <folder Name="None">
       <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/mdk/ses_startup_nrf52840.s" />
@@ -108,6 +110,8 @@
         <folder Name="mbedtls">
           <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/asn1parse.c" />
           <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/base64.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/sha256.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/platform_util.c" />
         </folder>
         <folder Name="mcuboot">
           <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/boot_record.c" />
@@ -129,6 +133,24 @@
           <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/swap_priv.h" />
           <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/swap_scratch.c" />
           <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/tlv.c" />
+          <folder Name="include">
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/bench.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/boot_record.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/boot_status.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/bootutil_log.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/bootutil_public.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/bootutil_test.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/bootutil.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/caps.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/enc_key_public.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/enc_key.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/fault_injection_hardening_delay_rng.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/fault_injection_hardening.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/ignore.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/image.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/security_cnt.h" />
+            <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/sign_key.h" />
+          </folder>
         </folder>
       </folder>
     </folder>
