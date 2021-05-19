@@ -113,3 +113,4 @@
 [submodule "libraries/3rdparty/mcuboot"]
 	path = libraries/3rdparty/mcuboot
 	url = git@github.com:dachalco/mcuboot.git
+    branch = dev
