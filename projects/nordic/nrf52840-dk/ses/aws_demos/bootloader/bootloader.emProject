@@ -69,21 +69,36 @@
       <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/drivers/src/prs/nrfx_prs.c" />
     </folder>
     <folder Name="nRF_Crypto">
-      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_ecc.c" />
-      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_ecdsa.c" />
-      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_hash.c" />
-      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_init.c" />
-      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_shared.c" />
+      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_ecc.c">
+        <configuration Name="Release" build_exclude_from_build="No" />
+      </file>
+      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_ecdsa.c">
+        <configuration Name="Release" build_exclude_from_build="No" />
+      </file>
+      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_hash.c">
+        <configuration Name="Release" build_exclude_from_build="No" />
+      </file>
+      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_init.c">
+        <configuration Name="Release" build_exclude_from_build="No" />
+      </file>
+      <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/components/libraries/crypto/nrf_crypto_shared.c">
+        <configuration Name="Release" build_exclude_from_build="No" />
+      </file>
+      <configuration Name="Release" build_exclude_from_build="No" />
     </folder>
     <folder Name="Application">
-      <file file_name="bootloader_code/asn1utility.c" />
-      <file file_name="bootloader_code/asn1utility.h" />
       <file file_name="bootloader_code/bootloader.h" />
-      <file file_name="bootloader_code/crypto.c" />
-      <file file_name="bootloader_code/crypto.h" />
+      <file file_name="bootloader_code/crypto.c">
+        <configuration Name="Release" build_exclude_from_build="No" />
+      </file>
+      <file file_name="bootloader_code/crypto.h">
+        <configuration Name="Release" build_exclude_from_build="No" />
+      </file>
       <file file_name="bootloader_code/main.c" />
       <file file_name="bootloader_code/sdk_config.h" />
-      <file file_name="bootloader_code/utils.c" />
+      <file file_name="bootloader_code/utils.c">
+        <configuration Name="Release" build_exclude_from_build="Yes" />
+      </file>
       <configuration Name="Release" build_exclude_from_build="No" />
       <folder Name="mcuboot_include">
         <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/mcuboot_config/mcuboot_config.h" />
@@ -92,6 +107,9 @@
         <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/include/flash_map_backend/flash_map_backend.h" />
       </folder>
       <file file_name="../../../../../../vendors/nordic/boards/nrf52840-dk/ports/mcuboot/flash_map_backend.c" />
+      <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/freertos/keys.c" />
+      <file file_name="bootloader_code/asn1utility.c" />
+      <file file_name="bootloader_code/asn1utility.h" />
     </folder>
     <folder Name="None">
       <file file_name="../../../../../../vendors/nordic/nRF5_SDK_15.2.0/modules/nrfx/mdk/ses_startup_nrf52840.s" />
@@ -108,10 +126,17 @@
     <folder Name="Lib">
       <folder Name="Third_Party">
         <folder Name="mbedtls">
-          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/asn1parse.c" />
-          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/base64.c" />
-          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/sha256.c" />
-          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/platform_util.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/asn1parse.c">
+            <configuration Name="Release" build_exclude_from_build="No" />
+          </file>
+          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/base64.c">
+            <configuration Name="Release" build_exclude_from_build="No" />
+          </file>
+          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/platform_util.c">
+            <configuration Name="Release" build_exclude_from_build="No" />
+          </file>
+          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/bignum.c" />
+          <file file_name="../../../../../../libraries/3rdparty/mbedtls/library/rsa.c" />
         </folder>
         <folder Name="mcuboot">
           <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/src/boot_record.c" />
@@ -151,6 +176,14 @@
             <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/security_cnt.h" />
             <file file_name="../../../../../../libraries/3rdparty/mcuboot/boot/bootutil/include/bootutil/sign_key.h" />
           </folder>
+        </folder>
+        <folder Name="tinycrypt">
+          <file file_name="../../../../../../libraries/3rdparty/tinycrypt/lib/source/sha256.c" />
+          <file file_name="../../../../../../libraries/3rdparty/tinycrypt/lib/source/utils.c">
+            <configuration Name="Release" build_exclude_from_build="No" />
+          </file>
+          <file file_name="../../../../../../libraries/3rdparty/tinycrypt/lib/source/ecc.c" />
+          <file file_name="../../../../../../libraries/3rdparty/tinycrypt/lib/source/ecc_dsa.c" />
         </folder>
       </folder>
     </folder>

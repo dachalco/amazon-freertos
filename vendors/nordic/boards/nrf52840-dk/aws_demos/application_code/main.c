@@ -342,8 +342,11 @@ int main( void )
     prvMiscInitialization();
 
     xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
-                            tskIDLE_PRIORITY,
-                            mainLOGGING_MESSAGE_QUEUE_LENGTH );
+                           tskIDLE_PRIORITY,
+                           mainLOGGING_MESSAGE_QUEUE_LENGTH );
+    //vUartWrite("Hello World 2\r\n");
+
+    configPRINT("Hello World 2\r\n");
 
     nrf_sdh_freertos_init( NULL, NULL );
     ret_code_t xErrCode = pm_init();
@@ -379,7 +382,7 @@ static void prvDeleteBonds( void )
 void vApplicationDaemonTaskStartupHook( void )
 {
     /* Start the demo tasks. */
-    DEMO_RUNNER_RunDemos();
+    //DEMO_RUNNER_RunDemos();
 }
 
 /*-----------------------------------------------------------*/

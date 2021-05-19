@@ -73,6 +73,8 @@ void vStartApplication( uint32_t start_addr );
 void vSwapImages();
 BankState_t xGetBankState( Bank_t xBank );
 
+#if 0
+
 static void on_error( void )
 {
     #if NRF_MODULE_ENABLED( NRF_LOG_BACKEND_RTT )
@@ -228,7 +230,7 @@ void vCommitSecondBank()
 
 
 
-#if 0
+
 /**@brief Function for application main entry. */
 int main( void )
 {
@@ -411,8 +413,127 @@ int main( void )
     }
 }
 #else
+
 #include "bootutil/bootutil.h"
 #include "bootutil/bootutil_log.h"
+#include "bootutil/image.h"
+
+/**@brief Function that sets the stack pointer and link register, and starts executing a particular address.
+ *
+ * @param[in]  new_msp  The new value to set in the main stack pointer.
+ * @param[in]  new_lr   The new value to set in the link register.
+ * @param[in]  addr     The address to execute.
+ */
+#if defined( __CC_ARM )
+    __ASM void StartApplication( uint32_t start_addr )
+    {
+        LDR R2, [ R0 ];
+        Get App MSP.
+           MSR MSP, R2;
+        Set the main stack pointer to the applications MSP.
+           LDR R3, [ R0, # 0x00000004 ];
+        Get application reset vector address.
+           BX R3;
+
+        No return -stack code is now activated only through SVC and plain interrupts.
+
+                  ALIGN
+    }
+
+#else /* if defined( __CC_ARM ) */
+    void vStartApplication( uint32_t start_addr )
+    {
+        __ASM volatile (
+            "LDR   R2, [%0]              \n" /*Get App MSP. */
+            "MSR   MSP, R2               \n" /*Set the main stack pointer to the applications MSP. */
+            "LDR   R3, [%0, #0x00000004] \n" /*Get application reset vector address. */
+            "BX    R3                    \n" /*No return - stack code is now activated only through SVC and plain interrupts. */
+            ".ALIGN                      \n"
+            ::"r" ( start_addr )             /* Argument list for the gcc assembly. start_addr is %0. */
+            );
+    }
+#endif /* if defined( __CC_ARM ) */
+
+static void on_error( void )
+{
+    #if NRF_MODULE_ENABLED( NRF_LOG_BACKEND_RTT )
+        /* To allow the buffer to be flushed by the host. */
+        nrf_delay_ms( 100 );
+    #endif
+    #ifdef NRF_DFU_DEBUG_VERSION
+        NRF_BREAKPOINT_COND;
+    #endif
+    NVIC_SystemReset();
+}
+
+void app_error_handler( uint32_t error_code,
+                        uint32_t line_num,
+                        const uint8_t * p_file_name )
+{
+    on_error();
+}
+
+void app_error_fault_handler( uint32_t id,
+                              uint32_t pc,
+                              uint32_t info )
+{
+    on_error();
+}
+
+void app_error_handler_bare( uint32_t error_code )
+{
+    on_error();
+}
+
+static void vDisableInterrupts( void )
+{
+    uint32_t interrupt_setting_mask;
+    uint8_t irq;
+
+    /* We start the loop from first interrupt, i.e. interrupt 0. */
+    irq = 0;
+    /* Fetch the current interrupt settings. */
+    interrupt_setting_mask = NVIC->ISER[ 0 ];
+
+    for( ; irq < MAX_NUMBER_INTERRUPTS; irq++ )
+    {
+        if( interrupt_setting_mask & ( IRQ_ENABLED << irq ) )
+        {
+            /* The interrupt was enabled, and hence disable it. */
+            NVIC_DisableIRQ( ( IRQn_Type ) irq );
+        }
+    }
+}
+
+/** Boots firmware at specific address */
+void vBoot( struct boot_rsp *rsp )
+{
+    volatile uint32_t xErrCode = NRF_SUCCESS;
+    uint32_t address = rsp->br_image_off + rsp->br_hdr->ih_hdr_size;
+
+    //xCryptoUnInit();
+    vDisableInterrupts();
+
+    sd_mbr_command_t com =
+    {
+        SD_MBR_COMMAND_INIT_SD,
+    };
+
+    xErrCode = sd_mbr_command( &com );
+    APP_ERROR_CHECK( xErrCode );
+
+    xErrCode = sd_softdevice_vector_table_base_set( BOOTLOADER_REGION_START );
+    APP_ERROR_CHECK( xErrCode );
+
+    xErrCode = sd_softdevice_vector_table_base_set( address );
+
+    /* Either there was no DFU functionality enabled in this project or the DFU */
+    /* module detected no ongoing DFU operation and found a valid main */
+    /* application. Boot the main application. */
+    /* nrf_bootloader_app_start(); */
+    vStartApplication( address );
+}
+
 int main( void )
 {
     struct boot_rsp rsp;
@@ -425,6 +546,11 @@ int main( void )
         BOOT_LOG_ERR("Unable to find bootable image");
         FIH_PANIC;
     }
+    
+    vBoot( &rsp );
+
+    BOOT_LOG_ERR("Never should get here");
+    while (1);
 }
 #endif
 
