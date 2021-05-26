@@ -1,13 +1,11 @@
 #include "flash_map_backend/flash_map_backend.h"
 #include "nrf_nvmc.h"
-#include "bootloader.h"
 #include "sysflash/sysflash.h"
 
 
 #include "mcuboot_config/mcuboot_config.h"
 #include "mcuboot_config/mcuboot_logging.h"
 #include "boards.h"
-#include "crypto.h"
 #include "nrf_mbr.h"
 #include "nrf_nvmc.h"
 #include "nrf_sdm.h"
@@ -20,8 +18,8 @@ static struct flash_area xFlashArea[4] =
     {
         .fa_id = FLASH_AREA_BOOTLOADER,
         .fa_device_id = 0,
-        .fa_off = BOOTLOADER_START,
-        .fa_size = 0x100000 - BOOTLOADER_START
+        .fa_off = 0xf8000,
+        .fa_size = 0x100000 - 0xf8000
     },
     {
         .fa_id = FLASH_AREA_IMAGE_PRIMARY(0),
@@ -40,8 +38,8 @@ static struct flash_area xFlashArea[4] =
     {
         .fa_id = FLASH_AREA_IMAGE_SCRATCH,
         .fa_device_id = 0,
-        .fa_off = SWAP_AREA_BEGIN,
-        .fa_size = SWAP_AREA_SIZE * 0x1000
+        .fa_off = 0xf1000,
+        .fa_size = 0x4000
     }
 };
 

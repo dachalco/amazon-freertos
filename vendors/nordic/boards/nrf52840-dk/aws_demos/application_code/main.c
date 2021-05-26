@@ -71,6 +71,7 @@
 #endif
 
 #include "aws_iot_ota_agent.h"
+#include "bootutil/bootutil_public.h"
 
 
 /* clang-format off */
@@ -351,7 +352,26 @@ int main( void )
     //configPRINT("Accepting OTA image\r\n");
     //OTA_SetImageState( eOTA_ImageState_Accepted );
     //configPRINT("OTA image\r\n");
-    configPRINT("Hello World 2\r\n");
+    configPRINT("Hello World 3\r\n");
+
+    int xRC = 0;
+    int xBootType = boot_swap_type();
+    configPRINTF(("Swap Type: %d", xBootType));
+
+    if (xBootType == BOOT_SWAP_TYPE_REVERT)
+    {
+        /* In test swap, image is only tentative until confirmed, and otherwise reverted next boot */
+        xRC = boot_set_confirmed();
+        if( xRC == 0 )
+        {
+            configPRINT("Image Confirmed.");
+        }
+        else
+        {
+            configPRINT("Failed to confirm image.");
+        }
+    }
+
 
     nrf_sdh_freertos_init( NULL, NULL );
     ret_code_t xErrCode = pm_init();
