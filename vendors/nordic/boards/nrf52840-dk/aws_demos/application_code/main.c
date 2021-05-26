@@ -70,6 +70,9 @@
     #include "nrf_uarte.h"
 #endif
 
+#include "aws_iot_ota_agent.h"
+
+
 /* clang-format off */
 
 /* Logging Task Defines. */
@@ -186,7 +189,7 @@ void prvUartEventHandler( app_uart_evt_t * pxEvent )
 {
     /* Declared as static so it can be pushed into the queue from the ISR. */
     static volatile uint8_t ucRxByte = 0;
-   BaseType_t xHigherPriorityTaskWoken;
+    BaseType_t xHigherPriorityTaskWoken;
     switch( pxEvent->evt_type )
     {
         case APP_UART_DATA_READY:
@@ -345,7 +348,9 @@ int main( void )
                            tskIDLE_PRIORITY,
                            mainLOGGING_MESSAGE_QUEUE_LENGTH );
     //vUartWrite("Hello World 2\r\n");
-
+    //configPRINT("Accepting OTA image\r\n");
+    //OTA_SetImageState( eOTA_ImageState_Accepted );
+    //configPRINT("OTA image\r\n");
     configPRINT("Hello World 2\r\n");
 
     nrf_sdh_freertos_init( NULL, NULL );

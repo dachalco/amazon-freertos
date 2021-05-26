@@ -1268,7 +1268,7 @@
 // <e> NRFX_UARTE_ENABLED - nrfx_uarte - UARTE peripheral driver
 //==========================================================
 #ifndef NRFX_UARTE_ENABLED
-#define NRFX_UARTE_ENABLED 1
+#define NRFX_UARTE_ENABLED 0
 #endif
 // <o> NRFX_UARTE0_ENABLED - Enable UARTE0 instance 
 #ifndef NRFX_UARTE0_ENABLED
@@ -1278,6 +1278,18 @@
 // <o> NRFX_UARTE1_ENABLED - Enable UARTE1 instance 
 #ifndef NRFX_UARTE1_ENABLED
 #define NRFX_UARTE1_ENABLED 0
+#endif
+
+#ifndef APP_UART_ENABLED
+#define APP_UART_ENABLED    1
+#endif
+
+#ifndef APP_UART_DRIVER_INSTANCE
+#define APP_UART_DRIVER_INSTANCE 0
+#endif
+
+#ifndef APP_FIFO_ENABLED
+#define APP_FIFO_ENABLED 1
 #endif
 
 // <o> NRFX_UARTE_DEFAULT_CONFIG_HWFC  - Hardware Flow Control

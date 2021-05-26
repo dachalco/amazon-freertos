@@ -6,7 +6,7 @@
 #define AFR_MAGICK                     "@AFRTOS"                                       /* Magick number for the AFR image */
 #define MAGICK_SIZE                    7                                               /* sizeof Magick */
 #define SIGNATURE_MAX_SIZE             256                                             /* Size allocated for signature in the header */
-#define CODE_REGION_1_START            SD_SIZE_GET( MBR_SIZE )                         /* Start of the first region*/
+#define CODE_REGION_1_START            SD_SIZE_GET( MBR_SIZE ) + 32                    /* Start of the first region*/
 #define CODE_REGION_2_START            0x8C000                                         /* Start of the second region */
 #define DESCRIPTOR_SIZE                CODE_PAGE_SIZE
 #define NRF_UICR_BOOT_START_ADDRESS    ( NRF_UICR_BASE + 0x14 )                        /* UICR page containing bootloader start address */

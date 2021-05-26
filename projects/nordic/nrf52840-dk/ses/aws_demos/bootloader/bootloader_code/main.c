@@ -417,6 +417,91 @@ int main( void )
 #include "bootutil/bootutil.h"
 #include "bootutil/bootutil_log.h"
 #include "bootutil/image.h"
+#include "mcuboot_config/mcuboot_logging.h"
+
+#include "boards.h"
+#include "app_uart.h"
+#include "nrf_peripherals.h"
+
+
+
+#if defined( UART_PRESENT )
+    #include "nrf_uart.h"
+#endif
+#if defined( UARTE_PRESENT )
+    #include "nrf_uarte.h"
+#endif
+
+#define UART_TX_BUF_SIZE                    ( 256 )                                 /**< UART TX buffer size. */
+#define UART_RX_BUF_SIZE                    ( 256 )                                 /**< UART RX buffer size. */
+
+
+/**@brief   Function for handling uart events.
+ *
+ * /**@snippet [Handling the data received over UART] */
+
+void prvUartEventHandler( app_uart_evt_t * pxEvent )
+{
+    /* Declared as static so it can be pushed into the queue from the ISR. */
+    static volatile uint8_t ucRxByte = 0;
+    switch( pxEvent->evt_type )
+    {
+        case APP_UART_DATA_READY:
+            app_uart_get( (uint8_t *)&ucRxByte );
+            app_uart_put( ucRxByte );
+
+            break;
+
+        case APP_UART_COMMUNICATION_ERROR:
+            APP_ERROR_HANDLER( pxEvent->data.error_communication );
+            break;
+
+        case APP_UART_FIFO_ERROR:
+            APP_ERROR_HANDLER( pxEvent->data.error_code );
+            break;
+
+        case APP_UART_TX_EMPTY:
+            break;
+
+        default:
+            break;
+    }
+}
+
+/*-----------------------------------------------------------*/
+
+/**@brief  Function for initializing the UART module.
+ */
+static void prvUartInit( void )
+{
+    uint32_t xErrCode;
+
+    app_uart_comm_params_t const xConnParams =
+    {
+        .rx_pin_no        = RX_PIN_NUMBER,
+        .tx_pin_no        = TX_PIN_NUMBER,
+        .rts_pin_no       = RTS_PIN_NUMBER,
+        .cts_pin_no       = CTS_PIN_NUMBER,
+        .flow_control     = APP_UART_FLOW_CONTROL_DISABLED,
+        .use_parity       = false,
+        #if defined( UART_PRESENT )
+            .baud_rate    = NRF_UART_BAUDRATE_115200
+        #else
+               .baud_rate = NRF_UARTE_BAUDRATE_115200
+                            #endif
+    };
+
+    APP_UART_FIFO_INIT( &xConnParams,
+                        UART_RX_BUF_SIZE,
+                        UART_TX_BUF_SIZE,
+                        prvUartEventHandler,
+                        _PRIO_APP_HIGH,
+                        xErrCode );
+    APP_ERROR_CHECK( xErrCode );
+}
+
+
+
 
 /**@brief Function that sets the stack pointer and link register, and starts executing a particular address.
  *
@@ -531,6 +616,7 @@ void vBoot( struct boot_rsp *rsp )
     /* module detected no ongoing DFU operation and found a valid main */
     /* application. Boot the main application. */
     /* nrf_bootloader_app_start(); */
+    BOOT_LOG_INF("Booting 0x%x...", address);
     vStartApplication( address );
 }
 
@@ -540,6 +626,8 @@ int main( void )
     int rc; 
     fih_int fih_rc = FIH_FAILURE;
 
+    prvUartInit();
+    BOOT_LOG_INF("Starting boot...");
     FIH_CALL(boot_go, fih_rc, &rsp);
     if (fih_not_eq(fih_rc, FIH_SUCCESS)) 
     {

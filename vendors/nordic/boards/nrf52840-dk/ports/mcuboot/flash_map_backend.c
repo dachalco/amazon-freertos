@@ -4,6 +4,8 @@
 #include "sysflash/sysflash.h"
 
 
+#include "mcuboot_config/mcuboot_config.h"
+#include "mcuboot_config/mcuboot_logging.h"
 #include "boards.h"
 #include "crypto.h"
 #include "nrf_mbr.h"
@@ -24,7 +26,7 @@ static struct flash_area xFlashArea[4] =
     {
         .fa_id = FLASH_AREA_IMAGE_PRIMARY(0),
         .fa_device_id = 0,
-        .fa_off = 0x26fe0,
+        .fa_off = 0x27000,
         .fa_size = 0x24000
     },
     {
@@ -105,16 +107,16 @@ int flash_area_erase(const struct flash_area * pfa,
     {
         return 0;
     }
-
     uint32_t ulAddress = pfa->fa_off + off;
     uint32_t ulPageAddress = ulAddress - (ulAddress % CODE_PAGE_SIZE);
     uint32_t ulNPages = len / CODE_PAGE_SIZE;
+
+    MCUBOOT_LOG_DBG("Erasing %d bytes @ 0x%x\r\n", len, ulAddress);
     if( len % CODE_PAGE_SIZE )
     {
         ulNPages += 1;
     }
 
-    
     for(int i=0; i<ulNPages; i++)
     {
         nrf_nvmc_page_erase(ulPageAddress);
@@ -142,12 +144,23 @@ int flash_area_get_sectors(int fa_id,
                            uint32_t *count, 
                            struct flash_sector *sectors)
 {
-    sectors->fs_size = CODE_PAGE_SIZE;
-    sectors->fs_off = 0;
+    int xRC = 0;
+    struct flash_area * pfa = &xFlashArea[fa_id];
 
-    struct flash_area * pfa = xFlashAreas[fa_id];
+    uint32_t addr = pfa->fa_off;
+    size_t sectors_n = (pfa->fa_size + (CODE_PAGE_SIZE - 1)) / CODE_PAGE_SIZE;
 
-    *count = pfa->fa_size / sectors->fs_size;
+    /* Initialize each sector */
+    for(int i = 0; i < sectors_n; i++)
+    {
+        sectors[i].fs_size = CODE_PAGE_SIZE;
+        sectors[i].fs_off = addr;
+        addr += CODE_PAGE_SIZE;
+    }
+
+    *count = sectors_n;
+
+    return xRC;
 }
 #endif
 
